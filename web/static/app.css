@@ -10,13 +10,49 @@ pre.atlog {
   word-break: break-all;
 }
 
-/* Sidebar nav active state */
+/* ---- Sidebar ---- */
+
+/* Expanded (default) */
+#sidebar { width: 15rem; }
+#sidebar[data-collapsed="true"] { width: 4rem; }
+
+/* Hide text labels and section headers when collapsed */
+#sidebar[data-collapsed="true"] .sidebar-label { display: none; }
+
+/* Icons: fixed size, always visible */
+.nav-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* Center nav items when collapsed */
+#sidebar[data-collapsed="true"] .nav-link {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Active nav link */
 .nav-link--active {
   color: #f1f0fe !important;
   background: rgba(91, 82, 232, 0.14);
   border-left: 2px solid #5b52e8;
-  padding-left: 18px;
+  padding-left: calc(1rem - 2px); /* compensate for border */
 }
+#sidebar[data-collapsed="true"] .nav-link--active {
+  border-left: none;
+  border-radius: 6px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Sign-in nudge: in collapsed mode show only the icon button */
+.sidebar-icon-only { display: none; }
+#sidebar[data-collapsed="true"] .sidebar-icon-only { display: flex; }
+#sidebar[data-collapsed="true"] .sidebar-label + a.sidebar-label,
+#sidebar[data-collapsed="true"] p.sidebar-label,
+#sidebar[data-collapsed="true"] a.sidebar-label { display: none; }
 
 /* Confidence indicators */
 .confidence-high   { color: #b91c1c; font-weight: 600; }

@@ -1,14 +1,8 @@
 """r8n-triage — browser dashboard for IoT connectivity triage.
 
-Architecture:
-  - FastAPI shell over the CLI's existing triage modules (no rebuild).
-  - Jinja2 + HTMX for server-rendered pages with localized interactivity.
-  - SQLite-backed audit log + codex KB (web/db.py).
-  - Mock SIM data from hologram_cli.mock_data (the same fixtures the CLI uses).
-
 Route map:
   Public  (no auth): /  /triage  /portal/*  /at  /health  /static
-  Admin (Basic Auth): /dash  /sims  /audit  /codex  /bulk  /onboard  /conductor  /fleet  /search
+  Login-required:    /dash  /sims  /audit  /codex  /bulk  /onboard  /conductor  /fleet  /search
 """
 from __future__ import annotations
 
@@ -41,7 +35,6 @@ MAX_LOG_BYTES = 200_000  # 200 KB hard limit on triage input
 app = FastAPI(title="r8n-triage", version="0.1.0")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
-# Session middleware must be added before any route that reads request.session
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.environ.get("SECRET_KEY", "dev-secret-change-me-in-production"),
@@ -49,9 +42,9 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 
-# Make PostHog key available to every template without passing it explicitly
 templates.env.globals["posthog_key"] = os.environ.get("POSTHOG_API_KEY", "")
 templates.env.globals["posthog_host"] = os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com")
+
 
 # ---- Auth ------------------------------------------------------------------
 
@@ -74,10 +67,18 @@ def _require_login(request: Request) -> dict:
     return user
 
 
+# ---- Template context helper -----------------------------------------------
+
+
+def ctx(request: Request, **kwargs) -> dict:
+    """Base template context — always injects current_user."""
+    return {"request": request, "current_user": get_current_user(request), **kwargs}
+
+
 # ---- Sample log registry ---------------------------------------------------
 
+
 def _load_samples() -> dict[str, dict]:
-    """Parse fixture AT logs into a name → {title, content} registry."""
     samples: dict[str, dict] = {}
     if not FIXTURES_DIR.exists():
         return samples
@@ -88,7 +89,7 @@ def _load_samples() -> dict[str, dict]:
             if stripped.lower().startswith("scenario:"):
                 title_line = stripped[len("scenario:"):].strip()
                 break
-        slug = re.sub(r"^\d+_", "", path.stem)  # strip leading "01_"
+        slug = re.sub(r"^\d+_", "", path.stem)
         samples[slug] = {"title": title_line or slug.replace("_", " "), "path": path}
     return samples
 
@@ -105,11 +106,6 @@ def on_startup() -> None:
     seed.seed_if_empty()
     global _SAMPLES
     _SAMPLES = _load_samples()
-
-
-def ctx(request: Request, **kwargs) -> dict:
-    """Base template context — injects current_user into every response."""
-    return {"request": request, "current_user": get_current_user(request), **kwargs}
 
 
 # ---- Health check (public) -------------------------------------------------
@@ -133,7 +129,7 @@ def landing(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "landing.html", ctx(request))
 
 
-# ---- Phase 1: triage workbench (PUBLIC) ------------------------------------
+# ---- Triage workbench (public) ---------------------------------------------
 
 
 @app.get("/triage", response_class=HTMLResponse)
@@ -143,24 +139,20 @@ def triage_page(
     iccid: Optional[str] = None,
 ) -> HTMLResponse:
     return templates.TemplateResponse(
-        request,
-        "triage.html",
-        ctx(
-            request,
+        request, "triage.html",
+        ctx(request,
             active_page="triage",
             preset_log=log or "",
             preset_iccid=iccid or "",
-            samples={k: v["title"] for k, v in _SAMPLES.items()},
-        ),
+            samples={k: v["title"] for k, v in _SAMPLES.items()}),
     )
 
 
 @app.get("/triage/sample/{name}", response_class=HTMLResponse)
 def triage_sample(name: str) -> HTMLResponse:
-    """Return raw fixture log text for inline loading via fetch."""
     sample = _SAMPLES.get(name)
     if not sample:
-        raise HTTPException(status_code=404, detail="Sample not found")
+        return HTMLResponse(content="", status_code=404)
     content = sample["path"].read_text(errors="replace")
     return HTMLResponse(content=content, media_type="text/plain")
 
@@ -218,10 +210,8 @@ def triage_diagnose(
     )
 
     return templates.TemplateResponse(
-        request,
-        "partials/triage_result.html",
-        ctx(
-            request,
+        request, "partials/triage_result.html",
+        ctx(request,
             diagnosis=diagnosis,
             reply=reply,
             vendor=log.vendor,
@@ -229,12 +219,11 @@ def triage_diagnose(
             similar=similar,
             sim_info=sim_info,
             sim_explanation=sim_explanation,
-            session_id=session_id,
-        ),
+            session_id=session_id),
     )
 
 
-# ---- Admin dashboard (/dash — requires auth) --------------------------------
+# ---- Admin dashboard (/dash) -----------------------------------------------
 
 
 @app.get("/dash", response_class=HTMLResponse)
@@ -244,43 +233,17 @@ def home(request: Request, _: dict = Depends(_require_login)) -> HTMLResponse:
     sims = mock_data.list_sims()
     by_state = Counter(s["state"] for s in sims)
     return templates.TemplateResponse(
-        request,
-        "home.html",
-        {
-            "request": request,
-            "rule_counts": rule_counts,
-            "recent_sessions": recent,
-            "sim_count": len(sims),
-            "state_distribution": dict(by_state),
-            "active_page": "dash",
-        },
+        request, "home.html",
+        ctx(request,
+            active_page="dash",
+            rule_counts=rule_counts,
+            recent_sessions=recent,
+            sim_count=len(sims),
+            state_distribution=dict(by_state)),
     )
 
 
-# ---- SIM detail (public read — uses mock data) ----------------------------
-
-
-@app.get("/sims/{iccid}", response_class=HTMLResponse)
-def sim_detail(request: Request, iccid: str, _: dict = Depends(_require_login)) -> HTMLResponse:
-    sim = mock_data.get_sim(iccid)
-    if sim is None:
-        return HTMLResponse(f"<h2>SIM not found: {iccid}</h2>", status_code=404)
-    explanation = explain_state(sim)
-    history = sorted(sim.get("state_history") or [], key=lambda e: e["ts"])
-    return templates.TemplateResponse(
-        request,
-        "sim_detail.html",
-        {
-            "request": request,
-            "active_page": "sims",
-            "sim": sim,
-            "explanation": explanation,
-            "state_history": history,
-        },
-    )
-
-
-# ---- Phase 2: SIMs index, audit log, codex KB, AT reference, search -------
+# ---- SIMs ------------------------------------------------------------------
 
 
 @app.get("/sims", response_class=HTMLResponse)
@@ -307,19 +270,36 @@ def sims_index(
     states = sorted({s.get("state") for s in mock_data.list_sims()})
     tags = sorted({t for s in mock_data.list_sims() for t in (s.get("tags") or [])})
     return templates.TemplateResponse(
-        request,
-        "sims_index.html",
-        {
-            "request": request,
-            "active_page": "sims",
-            "sims": sims,
-            "states": states,
-            "tags": tags,
-            "filter_state": state,
-            "filter_tag": tag,
-            "query": q or "",
-        },
+        request, "sims_index.html",
+        ctx(request,
+            active_page="sims",
+            sims=sims,
+            states=states,
+            tags=tags,
+            filter_state=state,
+            filter_tag=tag,
+            query=q or ""),
     )
+
+
+@app.get("/sims/{iccid}", response_class=HTMLResponse)
+def sim_detail(request: Request, iccid: str, _: dict = Depends(_require_login)) -> HTMLResponse:
+    sim = mock_data.get_sim(iccid)
+    if sim is None:
+        return HTMLResponse(f"<h2>SIM not found: {iccid}</h2>", status_code=404)
+    explanation = explain_state(sim)
+    history = sorted(sim.get("state_history") or [], key=lambda e: e["ts"])
+    return templates.TemplateResponse(
+        request, "sim_detail.html",
+        ctx(request,
+            active_page="sims",
+            sim=sim,
+            explanation=explanation,
+            state_history=history),
+    )
+
+
+# ---- Audit log -------------------------------------------------------------
 
 
 @app.get("/audit", response_class=HTMLResponse)
@@ -330,14 +310,11 @@ def audit_log(
 ) -> HTMLResponse:
     sessions = db.list_triage(limit=200, rule_id=rule_id)
     return templates.TemplateResponse(
-        request,
-        "audit.html",
-        {
-            "request": request,
-            "active_page": "audit",
-            "sessions": sessions,
-            "filter_rule": rule_id,
-        },
+        request, "audit.html",
+        ctx(request,
+            active_page="audit",
+            sessions=sessions,
+            filter_rule=rule_id),
     )
 
 
@@ -347,9 +324,8 @@ def audit_detail(request: Request, sid: str, _: dict = Depends(_require_login)) 
     if not session:
         return HTMLResponse("<h2>Session not found</h2>", status_code=404)
     return templates.TemplateResponse(
-        request,
-        "audit_detail.html",
-        {"request": request, "active_page": "audit", "s": session},
+        request, "audit_detail.html",
+        ctx(request, active_page="audit", s=session),
     )
 
 
@@ -363,6 +339,9 @@ def audit_save_outcome(
 ) -> RedirectResponse:
     db.update_triage_outcome(sid, outcome, cause or None, ticket_ref or None)
     return RedirectResponse(f"/audit/{sid}", status_code=303)
+
+
+# ---- Codex KB --------------------------------------------------------------
 
 
 @app.get("/codex", response_class=HTMLResponse)
@@ -380,20 +359,17 @@ def codex_index(
     modules = sorted({e["module"] for e in all_entries if e.get("module")})
     symptoms = sorted({t for e in all_entries for t in (e.get("symptom_tags") or [])})
     return templates.TemplateResponse(
-        request,
-        "codex.html",
-        {
-            "request": request,
-            "active_page": "codex",
-            "entries": entries,
-            "vendors": vendors,
-            "modules": modules,
-            "symptoms": symptoms,
-            "filter_vendor": vendor or "",
-            "filter_module": module or "",
-            "filter_symptom": symptom or "",
-            "query": q or "",
-        },
+        request, "codex.html",
+        ctx(request,
+            active_page="codex",
+            entries=entries,
+            vendors=vendors,
+            modules=modules,
+            symptoms=symptoms,
+            filter_vendor=vendor or "",
+            filter_module=module or "",
+            filter_symptom=symptom or "",
+            query=q or ""),
     )
 
 
@@ -417,9 +393,8 @@ def codex_new_form(
                 "source_session_id": from_session,
             }
     return templates.TemplateResponse(
-        request,
-        "codex_new.html",
-        {"request": request, "active_page": "codex", "prefill": prefill},
+        request, "codex_new.html",
+        ctx(request, active_page="codex", prefill=prefill),
     )
 
 
@@ -457,9 +432,8 @@ def codex_detail(request: Request, cid: str, _: dict = Depends(_require_login)) 
     if not entry:
         return HTMLResponse("<h2>Entry not found</h2>", status_code=404)
     return templates.TemplateResponse(
-        request,
-        "codex_entry.html",
-        {"request": request, "active_page": "codex", "e": entry},
+        request, "codex_entry.html",
+        ctx(request, active_page="codex", e=entry),
     )
 
 
@@ -469,22 +443,21 @@ def codex_upvote(cid: str, _: dict = Depends(_require_login)) -> RedirectRespons
     return RedirectResponse(f"/codex/{cid}", status_code=303)
 
 
+# ---- AT reference (public) -------------------------------------------------
+
+
 @app.get("/at", response_class=HTMLResponse)
 def at_index(request: Request, vendor: Optional[str] = None) -> HTMLResponse:
-    """AT reference is public — it's a useful standalone resource."""
     commands = at_reference.list_commands(vendor=vendor)
     by_vendor: dict[str, list] = {}
     for c in commands:
         by_vendor.setdefault(c.vendor, []).append(c)
     return templates.TemplateResponse(
-        request,
-        "at_reference.html",
-        {
-            "request": request,
-            "active_page": "at",
-            "by_vendor": by_vendor,
-            "filter_vendor": vendor or "",
-        },
+        request, "at_reference.html",
+        ctx(request,
+            active_page="at",
+            by_vendor=by_vendor,
+            filter_vendor=vendor or ""),
     )
 
 
@@ -493,8 +466,7 @@ def at_decode(request: Request, line: str = Form(...)) -> HTMLResponse:
     result = at_reference.decode_response(line.strip())
     analytics.capture(get_distinct_id(request), "at_response_decoded")
     return templates.TemplateResponse(
-        request,
-        "partials/at_decode_result.html",
+        request, "partials/at_decode_result.html",
         {"request": request, "line": line, "result": result},
     )
 
@@ -504,14 +476,20 @@ def at_lookup(request: Request, name: str) -> HTMLResponse:
     cmd = at_reference.lookup(name)
     analytics.capture(get_distinct_id(request), "at_command_looked_up", {"command": name})
     return templates.TemplateResponse(
-        request,
-        "partials/at_lookup_result.html",
+        request, "partials/at_lookup_result.html",
         {"request": request, "cmd": cmd, "name": name},
     )
 
 
+# ---- Search ----------------------------------------------------------------
+
+
 @app.get("/search", response_class=HTMLResponse)
-def global_search(request: Request, q: str = "", _: dict = Depends(_require_login)) -> HTMLResponse:
+def global_search(
+    request: Request,
+    q: str = "",
+    _: dict = Depends(_require_login),
+) -> HTMLResponse:
     sim_hits = []
     if q:
         sim = mock_data.get_sim(q)
@@ -522,26 +500,23 @@ def global_search(request: Request, q: str = "", _: dict = Depends(_require_logi
                 continue
             ql = q.lower()
             if (ql in (s.get("iccid") or "").lower() or
-                ql in (s.get("name") or "").lower() or
-                ql in (s.get("imei") or "").lower()):
+                    ql in (s.get("name") or "").lower() or
+                    ql in (s.get("imei") or "").lower()):
                 sim_hits.append(s)
     codex_hits = db.list_codex(q=q, limit=10) if q else []
     cmd_hits = at_reference.search(q) if q else []
     return templates.TemplateResponse(
-        request,
-        "search.html",
-        {
-            "request": request,
-            "active_page": None,
-            "query": q,
-            "sim_hits": sim_hits,
-            "codex_hits": codex_hits,
-            "cmd_hits": cmd_hits,
-        },
+        request, "search.html",
+        ctx(request,
+            active_page=None,
+            query=q,
+            sim_hits=sim_hits,
+            codex_hits=codex_hits,
+            cmd_hits=cmd_hits),
     )
 
 
-# ---- Phase 3: fleet health -------------------------------------------------
+# ---- Fleet health ----------------------------------------------------------
 
 
 @app.get("/fleet", response_class=HTMLResponse)
@@ -564,21 +539,18 @@ def fleet_health(request: Request, _: dict = Depends(_require_login)) -> HTMLRes
     )
 
     return templates.TemplateResponse(
-        request,
-        "fleet.html",
-        {
-            "request": request,
-            "active_page": "fleet",
-            "rule_counts": rule_counts,
-            "by_module": by_module,
-            "state_dist": dict(state_dist),
-            "tag_dist": dict(tag_dist),
-            "hot_groups": hot_groups_sorted[:6],
-        },
+        request, "fleet.html",
+        ctx(request,
+            active_page="fleet",
+            rule_counts=rule_counts,
+            by_module=by_module,
+            state_dist=dict(state_dist),
+            tag_dist=dict(tag_dist),
+            hot_groups=hot_groups_sorted[:6]),
     )
 
 
-# ---- Phase 4: bulk ops, onboarding wizard, conductor ----------------------
+# ---- Bulk ops --------------------------------------------------------------
 
 
 @app.get("/bulk", response_class=HTMLResponse)
@@ -586,14 +558,8 @@ def bulk_index(request: Request, _: dict = Depends(_require_login)) -> HTMLRespo
     sims = mock_data.list_sims()
     recent = db.list_bulk_ops()
     return templates.TemplateResponse(
-        request,
-        "bulk.html",
-        {
-            "request": request,
-            "active_page": "bulk",
-            "sims": sims,
-            "recent_ops": recent,
-        },
+        request, "bulk.html",
+        ctx(request, active_page="bulk", sims=sims, recent_ops=recent),
     )
 
 
@@ -612,6 +578,9 @@ def bulk_execute(
     return RedirectResponse("/bulk", status_code=303)
 
 
+# ---- Onboarding wizard -----------------------------------------------------
+
+
 @app.get("/onboard", response_class=HTMLResponse)
 def onboard_wizard(
     request: Request,
@@ -619,13 +588,8 @@ def onboard_wizard(
     _: dict = Depends(_require_login),
 ) -> HTMLResponse:
     return templates.TemplateResponse(
-        request,
-        "onboard.html",
-        {
-            "request": request,
-            "active_page": "onboard",
-            "step": step,
-        },
+        request, "onboard.html",
+        ctx(request, active_page="onboard", step=step),
     )
 
 
@@ -636,6 +600,9 @@ def onboard_submit(
     _: dict = Depends(_require_login),
 ) -> RedirectResponse:
     return RedirectResponse(f"/onboard?step={next_step}", status_code=303)
+
+
+# ---- Conductor -------------------------------------------------------------
 
 
 @app.get("/conductor", response_class=HTMLResponse)
@@ -651,16 +618,13 @@ def conductor_console(request: Request, _: dict = Depends(_require_login)) -> HT
     policies = db.list_policies()
     switches = db.list_switches(limit=20)
     return templates.TemplateResponse(
-        request,
-        "conductor.html",
-        {
-            "request": request,
-            "active_page": "conductor",
-            "hyper_sims": hyper,
-            "profile_dist": dict(profile_dist),
-            "policies": policies,
-            "switches": switches,
-        },
+        request, "conductor.html",
+        ctx(request,
+            active_page="conductor",
+            hyper_sims=hyper,
+            profile_dist=dict(profile_dist),
+            policies=policies,
+            switches=switches),
     )
 
 
@@ -697,7 +661,7 @@ def conductor_switch(
     return RedirectResponse("/conductor", status_code=303)
 
 
-# ---- Phase 5: customer self-service portal (public) -----------------------
+# ---- Customer self-service portal (public) ---------------------------------
 
 
 @app.get("/portal", response_class=HTMLResponse)
@@ -705,23 +669,19 @@ def portal_home(request: Request) -> HTMLResponse:
     customer_tag = "fleet:trucks"
     sims = [s for s in mock_data.list_sims() if customer_tag in (s.get("tags") or [])]
     return templates.TemplateResponse(
-        request,
-        "portal_home.html",
-        {
-            "request": request,
-            "active_page": "portal",
-            "sims": sims,
-            "customer_name": "FleetCo (demo)",
-        },
+        request, "portal_home.html",
+        ctx(request,
+            active_page="portal",
+            sims=sims,
+            customer_name="FleetCo (demo)"),
     )
 
 
 @app.get("/portal/triage", response_class=HTMLResponse)
 def portal_triage(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
-        request,
-        "portal_triage.html",
-        {"request": request, "active_page": "portal"},
+        request, "portal_triage.html",
+        ctx(request, active_page="portal"),
     )
 
 
@@ -738,12 +698,6 @@ def portal_triage_diagnose(
     log = parse(raw_log)
     diagnosis = analyze(log)
     return templates.TemplateResponse(
-        request,
-        "partials/portal_triage_result.html",
-        {
-            "request": request,
-            "diagnosis": diagnosis,
-            "vendor": log.vendor,
-            "module": log.module,
-        },
+        request, "partials/portal_triage_result.html",
+        {"request": request, "diagnosis": diagnosis, "vendor": log.vendor, "module": log.module},
     )
