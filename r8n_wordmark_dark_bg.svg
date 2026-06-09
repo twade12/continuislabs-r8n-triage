@@ -1,0 +1,8 @@
+<svg width="336" height="160" viewBox="0 0 84 40" fill="none"
+  xmlns="http://www.w3.org/2000/svg" aria-label="r8n">
+  <rect width="84" height="40" fill="#111118"/>
+  <text x="0" y="30" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, monospace"
+    font-size="32" font-weight="700" letter-spacing="-1" fill="#F2F2F5">
+    r<tspan fill="#6C63FF">8</tspan>n
+  </text>
+</svg>

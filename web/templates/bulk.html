@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Bulk operations — r8n{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-2">Bulk operations</h1>
+<p class="text-slate-500 text-sm mb-6">Multi-select SIMs, queue an action, dry-run before commit. Phase 4 demo — actions are queued but not executed against the live API.</p>
+
+<form method="post" action="/bulk/execute" class="bg-white border border-slate-200 rounded-lg p-5 mb-6">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <div>
+      <label class="block text-sm font-semibold mb-1">Operation</label>
+      <select name="op_type" class="w-full border border-slate-300 rounded p-2 text-sm">
+        <option value="pause">Pause</option>
+        <option value="resume">Resume</option>
+        <option value="add_tag">Add tag</option>
+        <option value="remove_tag">Remove tag</option>
+        <option value="change_plan">Change plan</option>
+      </select>
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-sm font-semibold mb-1">Note (optional)</label>
+      <input type="text" name="note" class="w-full border border-slate-300 rounded p-2 text-sm" placeholder="reason / context for the audit log">
+    </div>
+  </div>
+
+  <h3 class="text-sm font-semibold mb-2">Pick SIMs</h3>
+  <div class="bg-slate-50 border border-slate-200 rounded p-2 max-h-72 overflow-auto mb-4">
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-xs text-slate-500 uppercase">
+        <th class="px-2 py-1"><input type="checkbox" id="select-all" onclick="document.querySelectorAll('input[name=iccids]').forEach(c => c.checked = this.checked)"></th>
+        <th class="px-2 py-1">ICCID</th><th class="px-2 py-1">Name</th><th class="px-2 py-1">State</th>
+      </tr></thead>
+      <tbody>
+        {% for s in sims %}
+        <tr class="border-t border-slate-100">
+          <td class="px-2 py-1"><input type="checkbox" name="iccids" value="{{ s.iccid }}"></td>
+          <td class="px-2 py-1 font-mono text-xs">{{ s.iccid }}</td>
+          <td class="px-2 py-1 text-xs">{{ s.name or '—' }}</td>
+          <td class="px-2 py-1 text-xs">{{ s.state }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded text-sm">Queue (dry-run)</button>
+  <span class="text-xs text-slate-500 ml-2">Bulk ops affecting >10% of an org require a second-SE confirmation in production.</span>
+</form>
+
+<h2 class="font-semibold mb-3">Recent bulk operations</h2>
+<div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 border-b border-slate-200">
+      <tr class="text-left text-xs uppercase tracking-wider text-slate-500">
+        <th class="px-4 py-3">When</th>
+        <th class="px-4 py-3">Op</th>
+        <th class="px-4 py-3">Targets</th>
+        <th class="px-4 py-3">Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in recent_ops %}
+      <tr class="border-t border-slate-100">
+        <td class="px-4 py-3 text-xs text-slate-500">{{ o.ts }}</td>
+        <td class="px-4 py-3 text-xs font-mono">{{ o.op_type }}</td>
+        <td class="px-4 py-3 text-xs">{{ o.target_count }} SIM{{ '' if o.target_count == 1 else 's' }}</td>
+        <td class="px-4 py-3 text-xs">{{ o.details.note or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="px-4 py-8 text-center text-slate-500 text-sm">No bulk ops yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Codex — r8n{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Codex KB</h1>
+    <p class="text-slate-500 text-sm mt-1">Pre-resolved cases. Auto-suggested in the Triage Workbench when patterns match.</p>
+  </div>
+  <a href="/codex/new" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded text-sm">+ new entry</a>
+</div>
+
+<form method="get" class="bg-white border border-slate-200 rounded-lg p-3 mb-4 flex flex-wrap gap-3 items-end">
+  <div class="flex-1 min-w-[200px]">
+    <label class="text-xs text-slate-500 block">Search</label>
+    <input type="text" name="q" value="{{ query }}" placeholder="title / diagnosis / fix"
+      class="border border-slate-300 rounded p-2 text-sm w-full">
+  </div>
+  <div>
+    <label class="text-xs text-slate-500 block">Vendor</label>
+    <select name="vendor" class="border border-slate-300 rounded p-2 text-sm">
+      <option value="">all</option>
+      {% for v in vendors %}<option value="{{ v }}" {% if filter_vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="text-xs text-slate-500 block">Module</label>
+    <select name="module" class="border border-slate-300 rounded p-2 text-sm">
+      <option value="">all</option>
+      {% for m in modules %}<option value="{{ m }}" {% if filter_module == m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="text-xs text-slate-500 block">Symptom</label>
+    <select name="symptom" class="border border-slate-300 rounded p-2 text-sm">
+      <option value="">any</option>
+      {% for sy in symptoms %}<option value="{{ sy }}" {% if filter_symptom == sy %}selected{% endif %}>{{ sy }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded text-sm">Filter</button>
+</form>
+
+<div class="space-y-3">
+  {% for e in entries %}
+  <a href="/codex/{{ e.id }}" class="block bg-white border border-slate-200 rounded-lg p-4 hover:border-brand-500 transition">
+    <div class="flex items-start justify-between">
+      <div>
+        <div class="font-semibold">{{ e.title }}</div>
+        <div class="text-xs text-slate-500 mt-1">
+          {{ e.vendor or 'any vendor' }} / {{ e.module or 'any module' }}
+          {% if e.carrier %}· {{ e.carrier }}{% endif %}
+          {% if e.rat %}· {{ e.rat }}{% endif %}
+        </div>
+      </div>
+      <div class="text-xs text-slate-500">▲ {{ e.upvotes }}</div>
+    </div>
+    <div class="text-sm text-slate-700 mt-2 line-clamp-2">{{ e.diagnosis }}</div>
+    <div class="mt-2 flex flex-wrap gap-1">
+      {% for t in e.symptom_tags %}<span class="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono">{{ t }}</span>{% endfor %}
+    </div>
+  </a>
+  {% else %}
+  <div class="bg-white border border-dashed border-slate-300 rounded-lg p-8 text-center text-slate-500">
+    No entries match. Try clearing filters or <a href="/codex/new" class="text-brand-600 hover:underline">create a new entry</a>.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

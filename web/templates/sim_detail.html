@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ sim.iccid }} — r8n{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="/sims" class="text-xs text-brand-600 hover:underline">← back to SIMs</a>
+</div>
+
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold font-mono">{{ sim.iccid }}</h1>
+    <div class="text-slate-600 mt-1">{{ sim.name or '—' }} {% if sim.tags %}· {% for t in sim.tags %}<span class="text-xs bg-slate-100 px-2 py-0.5 rounded">{{ t }}</span> {% endfor %}{% endif %}</div>
+  </div>
+  <div class="space-x-2">
+    <button class="bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm px-3 py-1 rounded">Pause</button>
+    <button class="bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-sm px-3 py-1 rounded">Resume</button>
+    <button class="bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm px-3 py-1 rounded">Tag</button>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Status + Why -->
+  {% set sev = explanation.severity %}
+  {% set sev_class = 'bg-blue-50 border-blue-200 text-blue-900' if sev == 'info' else ('bg-amber-50 border-amber-200 text-amber-900' if sev == 'warning' else 'bg-red-50 border-red-200 text-red-900') %}
+  <div class="bg-white border border-slate-200 rounded-lg p-5 lg:col-span-2 space-y-3">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wider">State</div>
+        <div class="font-mono font-semibold">{{ sim.state }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wider">Plan</div>
+        <div class="text-sm">{{ sim.plan.name if sim.plan else '—' }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wider">Used / cap</div>
+        <div class="text-sm">{{ '%.1f' | format(sim.current_period.used_mb) if sim.current_period else '—' }}{% if sim.plan %} / {{ sim.plan.limit_mb }} MB{% endif %}</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wider">Modem</div>
+        <div class="text-sm font-mono">{{ sim.modem or '—' }}</div>
+      </div>
+    </div>
+    <div class="border-t border-slate-100 pt-3">
+      <div class="border {{ sev_class }} rounded p-3">
+        <div class="font-semibold text-sm mb-1">Why this state?</div>
+        <div class="text-sm">{{ explanation.summary }}</div>
+        <div class="text-xs mt-1 opacity-90">{{ explanation.explanation }}</div>
+        {% if explanation.next_actions %}
+        <ul class="text-xs mt-2 space-y-1">
+          {% for a in explanation.next_actions %}<li>• {{ a }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- State history -->
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="font-semibold mb-3">State history</h2>
+    {% if state_history %}
+    <ul class="text-sm space-y-1">
+      {% for entry in state_history %}
+      <li class="flex justify-between border-b border-slate-100 py-1.5">
+        <span class="font-mono">{{ entry.state }}</span>
+        <span class="text-xs text-slate-500">epoch {{ entry.ts }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="text-sm text-slate-500">No state changes recorded.</div>
+    {% endif %}
+  </div>
+
+  <!-- Last session -->
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="font-semibold mb-3">Last session</h2>
+    {% if sim.last_session %}
+    <dl class="text-sm grid grid-cols-2 gap-2">
+      <dt class="text-slate-500">Operator</dt><dd>{{ sim.last_session.operator }}</dd>
+      <dt class="text-slate-500">Country</dt><dd>{{ sim.last_session.country }}</dd>
+      <dt class="text-slate-500">RAT</dt><dd>{{ sim.last_session.rat }}</dd>
+      <dt class="text-slate-500">RSRP</dt><dd>{{ sim.last_session.rsrp }} dBm</dd>
+      <dt class="text-slate-500">Bytes</dt><dd>{{ sim.last_session.bytes }}</dd>
+    </dl>
+    {% else %}
+    <div class="text-sm text-slate-500">No sessions yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- eUICC profiles -->
+  {% if sim.euicc_profiles %}
+  <div class="bg-white border border-slate-200 rounded-lg p-5 lg:col-span-2">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-semibold">eUICC profiles</h2>
+      <a href="/conductor" class="text-xs text-brand-600 hover:underline">Conductor →</a>
+    </div>
+    <ul class="text-sm space-y-2">
+      {% for p in sim.euicc_profiles %}
+      <li class="flex items-center justify-between border-b border-slate-100 py-2">
+        <div>
+          <span class="px-2 py-0.5 text-xs rounded {% if p.active %}bg-green-100 text-green-800{% else %}bg-slate-100 text-slate-700{% endif %}">{{ 'active' if p.active else 'inactive' }}</span>
+          <span class="ml-2">{{ p.carrier }}</span>
+          <span class="ml-2 text-xs text-slate-500 font-mono">{{ p.iccid }}</span>
+        </div>
+        {% if not p.active %}
+        <form method="post" action="/conductor/switch/{{ sim.iccid }}" class="inline">
+          <input type="hidden" name="new_profile" value="{{ p.carrier }}">
+          <button type="submit" class="text-xs text-brand-600 hover:underline">Switch to this →</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

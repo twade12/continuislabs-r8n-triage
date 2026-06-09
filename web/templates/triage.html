@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Triage workbench — r8n{% endblock %}
+{% block meta_description %}Paste your modem's AT log and get an instant diagnosis, evidence, and a draft customer reply. Free IoT connectivity triage tool.{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Triage workbench</h1>
+    <p class="text-slate-500 text-sm mt-1">Paste a modem AT log — get a diagnosis, evidence, and a draft reply. No account needed.</p>
+  </div>
+</div>
+
+{% if samples %}
+<div class="mb-5">
+  <div class="text-xs text-slate-500 mb-2 font-mono uppercase tracking-wider">Load a sample log:</div>
+  <div class="flex flex-wrap gap-2" id="sample-pills">
+    {% for slug, title in samples.items() %}
+    <button type="button"
+      class="sample-pill"
+      onclick="loadSample('{{ slug }}', this)">
+      {{ title.split('—')[0].strip() if '—' in title else title[:50] }}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<form
+  hx-post="/triage/diagnose"
+  hx-target="#triage-result"
+  hx-swap="innerHTML"
+  hx-indicator="#triage-spinner"
+  class="grid grid-cols-1 lg:grid-cols-2 gap-6"
+>
+  <div class="space-y-4">
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <label class="block text-sm font-semibold mb-2">
+        Customer message
+        <span class="text-slate-400 font-normal">(optional)</span>
+      </label>
+      <textarea name="customer_msg" rows="3"
+        class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none bg-slate-50"
+        placeholder="e.g., Device has been deployed for 24 hours and won't connect. We've already activated the SIM."></textarea>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <label class="block text-sm font-semibold">
+          AT log <span class="text-red-500">*</span>
+        </label>
+        <span class="text-xs text-slate-400 font-mono">max 200 KB</span>
+      </div>
+      <textarea id="log-textarea" name="raw_log" rows="20" required
+        class="w-full border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none bg-slate-50"
+        placeholder="Paste raw AT command transcript here…&#10;&#10;AT&#10;OK&#10;ATI&#10;Quectel&#10;BG96&#10;...">{{ preset_log }}</textarea>
+      <div class="text-xs text-slate-400 mt-1.5">
+        Capture from a serial console, UART log, or SDK debug output. Works with any AT-compatible modem.
+      </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-lg p-4 grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm font-semibold mb-1">
+          ICCID
+          <span class="text-slate-400 font-normal">(optional)</span>
+        </label>
+        <input type="text" name="iccid" value="{{ preset_iccid }}"
+          placeholder="893810000012345001"
+          class="w-full border border-slate-200 rounded-lg p-2 font-mono text-xs bg-slate-50">
+        <div class="text-xs text-slate-400 mt-1">Cross-references SIM state</div>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1">Your name (for reply)</label>
+        <input type="text" name="sender" value=""
+          placeholder="e.g., Alex"
+          class="w-full border border-slate-200 rounded-lg p-2 text-sm bg-slate-50">
+      </div>
+      <div class="col-span-2 flex items-center justify-between border-t border-slate-100 pt-3">
+        <label class="flex items-center text-sm gap-2 text-slate-600">
+          <input type="checkbox" name="persist" value="on"> Save to audit log
+        </label>
+        <button type="submit" class="btn-brand font-medium px-5 py-2 rounded-lg text-sm flex items-center gap-2">
+          Diagnose
+          <span id="triage-spinner" class="htmx-indicator"><span class="spinner"></span></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="triage-result" class="space-y-4">
+    <div class="bg-white border border-dashed border-slate-200 rounded-lg p-10 text-center text-slate-400">
+      <div class="text-3xl mb-3">
+        <svg class="w-8 h-8 mx-auto" viewBox="0 0 36 36" fill="none">
+          <circle cx="10" cy="18" r="4" fill="#5b52e8" fill-opacity="0.3"/>
+          <circle cx="26" cy="18" r="4" fill="#5b52e8" fill-opacity="0.15"/>
+          <line x1="14" y1="18" x2="22" y2="18" stroke="#5b52e8" stroke-width="1.5" stroke-opacity="0.4"/>
+          <polyline points="20,15.5 22.5,18 20,20.5" stroke="#5b52e8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-opacity="0.4"/>
+        </svg>
+      </div>
+      <div class="text-sm font-medium text-slate-500">Submit a log to see the diagnosis here</div>
+      <div class="text-xs mt-1.5 text-slate-400">or load a sample above to see what it looks like</div>
+    </div>
+  </div>
+</form>
+
+<script>
+function loadSample(slug, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  fetch('/triage/sample/' + slug)
+    .then(r => r.text())
+    .then(text => {
+      document.getElementById('log-textarea').value = text;
+      // Reset pill state
+      document.querySelectorAll('.sample-pill').forEach(p => {
+        p.style.borderColor = '';
+        p.style.color = '';
+        p.style.background = '';
+        p.disabled = false;
+        p.textContent = p.dataset.label || p.textContent;
+      });
+      btn.style.borderColor = '#5b52e8';
+      btn.style.color = '#5b52e8';
+      btn.style.background = '#f3f2fd';
+      btn.textContent = btn.dataset.label || btn.textContent.replace('Loading…', '');
+      btn.disabled = false;
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.label || slug;
+    });
+}
+// Cache original labels
+document.querySelectorAll('.sample-pill').forEach(p => { p.dataset.label = p.textContent.trim(); });
+</script>
+{% endblock %}

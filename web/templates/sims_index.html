@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}SIMs — r8n{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-semibold">SIMs</h1>
+  <div class="text-sm text-slate-500">{{ sims|length }} SIM{{ '' if sims|length == 1 else 's' }}</div>
+</div>
+
+<form method="get" class="bg-white border border-slate-200 rounded-lg p-3 mb-4 flex flex-wrap gap-3 items-end">
+  <div>
+    <label class="text-xs text-slate-500 block">Search</label>
+    <input type="text" name="q" value="{{ query }}" placeholder="ICCID / IMEI / name"
+      class="border border-slate-300 rounded p-2 text-sm font-mono">
+  </div>
+  <div>
+    <label class="text-xs text-slate-500 block">State</label>
+    <select name="state" class="border border-slate-300 rounded p-2 text-sm">
+      <option value="">all</option>
+      {% for s in states %}
+      <option value="{{ s }}" {% if filter_state == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="text-xs text-slate-500 block">Tag</label>
+    <select name="tag" class="border border-slate-300 rounded p-2 text-sm">
+      <option value="">any</option>
+      {% for t in tags %}
+      <option value="{{ t }}" {% if filter_tag == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded text-sm">Filter</button>
+  {% if filter_state or filter_tag or query %}
+  <a href="/sims" class="text-xs text-slate-500 hover:underline">clear</a>
+  {% endif %}
+</form>
+
+<div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 border-b border-slate-200">
+      <tr class="text-left text-xs uppercase tracking-wider text-slate-500">
+        <th class="px-4 py-3">ICCID</th>
+        <th class="px-4 py-3">Name</th>
+        <th class="px-4 py-3">State</th>
+        <th class="px-4 py-3">Plan</th>
+        <th class="px-4 py-3">Used</th>
+        <th class="px-4 py-3">Modem</th>
+        <th class="px-4 py-3">Tags</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sims %}
+      <tr class="border-t border-slate-100 hover:bg-slate-50">
+        <td class="px-4 py-3 font-mono text-xs"><a href="/sims/{{ s.iccid }}" class="text-brand-600 hover:underline">{{ s.iccid }}</a></td>
+        <td class="px-4 py-3">{{ s.name or '—' }}</td>
+        <td class="px-4 py-3">
+          {% set state_class = 'bg-green-100 text-green-800' if s.state == 'LIVE' else ('bg-amber-100 text-amber-800' if s.state in ('LIVE-PENDING','TEST-ACTIVATE','PAUSED-USER') else 'bg-red-100 text-red-800') %}
+          <span class="text-xs px-2 py-0.5 rounded {{ state_class }}">{{ s.state }}</span>
+        </td>
+        <td class="px-4 py-3 text-xs">{{ s.plan.name if s.plan else '—' }}</td>
+        <td class="px-4 py-3 text-xs">{% if s.current_period %}{{ '%.1f' | format(s.current_period.used_mb) }} MB{% else %}—{% endif %}</td>
+        <td class="px-4 py-3 text-xs font-mono">{{ s.modem or '—' }}</td>
+        <td class="px-4 py-3 text-xs">
+          {% for t in s.tags or [] %}<span class="bg-slate-100 px-1.5 py-0.5 rounded">{{ t }}</span> {% endfor %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td class="px-4 py-8 text-center text-slate-500" colspan="7">No SIMs match.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

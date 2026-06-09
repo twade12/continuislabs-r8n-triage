@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Self-serve triage — Customer portal{% endblock %}
+
+{% block content %}
+<div class="mb-4"><a href="/portal" class="text-xs text-brand-600 hover:underline">← back to portal</a></div>
+
+<h1 class="text-2xl font-semibold mb-2">Self-serve triage</h1>
+<p class="text-slate-500 text-sm mb-6">Paste the AT log from your modem. We'll analyze it and tell you what we see — same engine our SE team uses.</p>
+
+<form hx-post="/portal/triage/diagnose" hx-target="#portal-result" hx-swap="innerHTML" hx-indicator="#portal-spinner"
+      class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <label class="block text-sm font-semibold mb-2">AT log</label>
+    <textarea name="raw_log" rows="22" required
+      class="w-full border border-slate-300 rounded p-2 font-mono text-xs"
+      placeholder="AT&#10;OK&#10;AT+CEREG?&#10;+CEREG: 0,3&#10;OK&#10;..."></textarea>
+    <button type="submit" class="mt-3 btn-brand px-4 py-2 rounded-lg text-sm font-medium">
+      Analyze
+      <span id="portal-spinner" class="htmx-indicator"><span class="spinner ml-1"></span></span>
+    </button>
+    <div class="mt-3 text-xs text-slate-500">
+      We don't store your log unless you also open a ticket. The analysis runs entirely on our servers and the result is shown to you only.
+    </div>
+  </div>
+
+  <div id="portal-result">
+    <div class="bg-white border border-dashed border-slate-300 rounded-lg p-8 text-center text-slate-500">
+      <div class="text-sm">Submit an AT log to see our diagnosis.</div>
+    </div>
+  </div>
+</form>
+{% endblock %}

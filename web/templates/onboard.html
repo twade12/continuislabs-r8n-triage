@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Onboarding wizard — r8n{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-2">Onboarding wizard</h1>
+<p class="text-slate-500 text-sm mb-6">Step-by-step flow for activating a new SIM batch.</p>
+
+<!-- Progress bar -->
+<div class="bg-white border border-slate-200 rounded-lg p-4 mb-6">
+  <div class="flex justify-between text-xs text-slate-500 uppercase tracking-wider mb-2">
+    {% for label in ['1. ICCIDs', '2. Plan', '3. Tag', '4. Review', '5. Activate', '6. Verify'] %}
+    {% set i = loop.index %}
+    <div class="flex-1 text-center {% if i == step %}text-brand-600 font-semibold{% endif %}{% if i < step %} text-emerald-700{% endif %}">{{ label }}</div>
+    {% endfor %}
+  </div>
+  <div class="h-1 bg-slate-200 rounded">
+    <div class="h-1 bg-brand-500 rounded" style="width: {{ (step / 6 * 100)|round }}%"></div>
+  </div>
+</div>
+
+<form method="post" action="/onboard" class="bg-white border border-slate-200 rounded-lg p-6 max-w-3xl">
+  <input type="hidden" name="step" value="{{ step }}">
+  <input type="hidden" name="next_step" value="{{ step + 1 }}">
+
+  {% if step == 1 %}
+  <h2 class="text-lg font-semibold mb-3">Step 1: Upload ICCIDs</h2>
+  <p class="text-sm text-slate-600 mb-4">Paste ICCIDs (one per line) or upload a CSV. Activation codes also accepted.</p>
+  <textarea rows="10" name="iccids"
+    class="w-full border border-slate-300 rounded p-3 font-mono text-xs"
+    placeholder="893810000012345001&#10;893810000012345002&#10;..."></textarea>
+
+  {% elif step == 2 %}
+  <h2 class="text-lg font-semibold mb-3">Step 2: Choose plan + region</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    {% for plan in [
+      ('Hologram Global 10MB', '$1.99/mo · best for low-data sensors'),
+      ('Hologram Global 100MB', '$5.99/mo · most common starter plan'),
+      ('Hologram Global EU+US 50MB', '$4.99/mo · for cross-region fleets'),
+    ] %}
+    <label class="block border border-slate-300 rounded-lg p-3 hover:border-brand-500 cursor-pointer">
+      <input type="radio" name="plan" value="{{ plan[0] }}" class="mr-2">
+      <span class="font-semibold text-sm">{{ plan[0] }}</span>
+      <div class="text-xs text-slate-500 mt-1">{{ plan[1] }}</div>
+    </label>
+    {% endfor %}
+  </div>
+
+  {% elif step == 3 %}
+  <h2 class="text-lg font-semibold mb-3">Step 3: Tag for organisation</h2>
+  <p class="text-sm text-slate-600 mb-4">Tags let you filter, bulk-operate, and monitor this batch later. Suggested format: <code>fleet-purpose-region-period</code>.</p>
+  <input type="text" name="tag" placeholder="fleet-trucks-east-q2-2026"
+    class="w-full border border-slate-300 rounded p-2 font-mono text-sm">
+
+  {% elif step == 4 %}
+  <h2 class="text-lg font-semibold mb-3">Step 4: Review</h2>
+  <div class="bg-slate-50 border border-slate-200 rounded p-4 text-sm space-y-1">
+    <div><span class="text-slate-500">SIMs:</span> 0 (none captured in demo)</div>
+    <div><span class="text-slate-500">Plan:</span> Hologram Global 100MB</div>
+    <div><span class="text-slate-500">Tag:</span> fleet-trucks-east-q2-2026</div>
+    <div><span class="text-slate-500">Estimated monthly cost:</span> $0</div>
+  </div>
+
+  {% elif step == 5 %}
+  <h2 class="text-lg font-semibold mb-3">Step 5: Activate</h2>
+  <p class="text-sm text-slate-600 mb-4">Bulk activation submits a single API call to <code class="font-mono">POST /links/cellular/bulkclaim</code> with idempotent retries.</p>
+  <div class="bg-slate-50 border border-slate-200 rounded p-3 text-xs text-slate-600">In demo mode this step does not actually call the Hologram API.</div>
+
+  {% elif step == 6 %}
+  <h2 class="text-lg font-semibold mb-3">Step 6: Verify first attach</h2>
+  <p class="text-sm text-slate-600 mb-4">Wait window: 30 minutes. Any SIM that doesn't attach in time auto-routes through the analyzer.</p>
+  <div class="bg-emerald-50 border border-emerald-200 rounded p-3 text-sm text-emerald-900">
+    Onboarding complete (demo). In production, failures here would route to /triage with the modem's last log auto-fetched.
+  </div>
+  {% endif %}
+
+  <div class="mt-6 flex justify-between">
+    {% if step > 1 %}
+    <a href="/onboard?step={{ step - 1 }}" class="px-3 py-2 border border-slate-300 rounded text-sm">Back</a>
+    {% else %}<span></span>{% endif %}
+    {% if step < 6 %}
+    <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded text-sm">Next →</button>
+    {% else %}
+    <a href="/onboard?step=1" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm">Start over</a>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}

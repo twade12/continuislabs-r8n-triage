@@ -1,0 +1,24 @@
+[Unit]
+Description=r8n-triage — IoT connectivity triage web app
+After=network.target
+
+[Service]
+Type=simple
+User=mnemos
+WorkingDirectory=/home/mnemos/Documents/Hologram
+EnvironmentFile=/home/mnemos/Documents/Hologram/.env
+ExecStart=/home/mnemos/Documents/Hologram/.venv/bin/uvicorn \
+    web.main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 1 \
+    --log-level info
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,93 @@
+{# HTMX partial returned by POST /triage/diagnose #}
+{% set health_class = "health-healthy" if diagnosis.health == "healthy" else ("health-degraded" if diagnosis.health == "degraded" else "health-broken") %}
+
+<div class="bg-white border border-slate-200 rounded-lg p-4">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-semibold">Diagnosis</h2>
+    <span class="text-xs px-2 py-0.5 rounded {{ health_class }}">{{ diagnosis.health|upper }}</span>
+  </div>
+  <div class="text-sm text-slate-700">{{ diagnosis.summary }}</div>
+  <div class="text-xs text-slate-500 mt-2">
+    Detected: {{ vendor or 'vendor unknown' }}{% if module %} / {{ module }}{% endif %}
+    {% if session_id %} · <a href="/audit/{{ session_id }}" class="text-brand-600 hover:underline">audit-log entry</a>{% endif %}
+  </div>
+</div>
+
+{% if sim_info %}
+<div class="bg-white border border-slate-200 rounded-lg p-4">
+  <h3 class="text-sm font-semibold mb-2">SIM cross-reference: <a href="/sims/{{ sim_info.iccid }}" class="font-mono text-brand-600 hover:underline">{{ sim_info.iccid }}</a></h3>
+  <div class="text-xs text-slate-600 space-y-1">
+    <div><span class="text-slate-500">State:</span> <span class="font-mono">{{ sim_info.state }}</span> — {{ sim_explanation.summary }}</div>
+    {% if sim_info.last_session %}
+    <div><span class="text-slate-500">Last session:</span> {{ sim_info.last_session.operator }} {{ sim_info.last_session.rat }} in {{ sim_info.last_session.country }}</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% for h in diagnosis.hypotheses %}
+<div class="bg-white border border-slate-200 rounded-lg p-4">
+  <div class="flex items-center justify-between mb-2">
+    <div>
+      <div class="text-xs text-slate-500">#{{ loop.index }} · rule <span class="font-mono">{{ h.rule_id }}</span></div>
+      <div class="font-semibold mt-0.5">{{ h.title }}</div>
+    </div>
+    <span class="confidence-{{ h.confidence }} text-xs uppercase tracking-wider">{{ h.confidence }}</span>
+  </div>
+  <div class="text-sm text-slate-700 mb-3">{{ h.explanation }}</div>
+  {% if h.evidence %}
+  <div class="bg-slate-50 border border-slate-200 rounded p-3 text-xs mb-3">
+    <div class="font-semibold mb-1 text-slate-500 uppercase tracking-wider">Evidence</div>
+    <ul class="space-y-1">
+      {% for e in h.evidence %}<li class="font-mono">• {{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if h.next_actions %}
+  <div class="text-xs">
+    <div class="font-semibold mb-1 text-slate-500 uppercase tracking-wider">Next actions</div>
+    <ul class="space-y-1">
+      {% for a in h.next_actions %}<li>• {{ a }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if reply %}
+<div class="bg-white border border-slate-200 rounded-lg p-4">
+  <div class="flex items-center justify-between mb-2">
+    <h2 class="font-semibold">Draft customer reply</h2>
+    <button onclick="navigator.clipboard.writeText(document.getElementById('reply-body').value)"
+      class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">Copy</button>
+  </div>
+  <textarea id="reply-body" rows="14" class="w-full border border-slate-300 rounded p-3 text-sm font-mono">{{ reply }}</textarea>
+  <div class="text-xs text-slate-500 mt-2">Edit inline before sending. The "send" integration with Zendesk/Salesforce is a Phase 4 add.</div>
+</div>
+{% endif %}
+
+{% if similar %}
+<div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+  <h2 class="font-semibold mb-2">Similar codex entries</h2>
+  <p class="text-xs text-slate-600 mb-3">Pattern matches based on vendor, module, and the matched diagnosis rule. Review before applying.</p>
+  <div class="space-y-2">
+    {% for c in similar %}
+    <a href="/codex/{{ c.id }}" class="block bg-white border border-slate-200 rounded p-3 hover:border-brand-500 transition">
+      <div class="font-semibold text-sm">{{ c.title }}</div>
+      <div class="text-xs text-slate-500 mt-0.5">
+        {{ c.vendor or '—' }} / {{ c.module or '—' }} {% if c.carrier %}· {{ c.carrier }}{% endif %} · ▲ {{ c.upvotes }}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if session_id %}
+<div class="bg-white border border-slate-200 rounded-lg p-4 text-sm">
+  <div class="flex items-center justify-between">
+    <span>Saved to audit log.</span>
+    <a href="/codex/new?from_session={{ session_id }}" class="text-brand-600 hover:underline text-xs">Save to codex KB →</a>
+  </div>
+</div>
+{% endif %}

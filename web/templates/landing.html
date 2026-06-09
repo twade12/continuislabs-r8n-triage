@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>r8n — IoT connectivity triage</title>
+  <meta name="description" content="Paste your modem's AT log — get an instant diagnosis, evidence, and a draft fix. Free IoT connectivity triage tool.">
+  <meta property="og:title" content="r8n — IoT connectivity triage">
+  <meta property="og:description" content="Paste your modem's AT log — get an instant diagnosis in seconds. No login required.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" type="image/svg+xml" href="/static/r8n_icon.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <link rel="stylesheet" href="/static/app.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { mono: ["'Geist Mono'", "'JetBrains Mono'", 'ui-monospace', 'monospace'] },
+          colors: {
+            brand: { 50:'#f3f2fd', 100:'#e8e7fa', 200:'#d2cff6',
+                     500:'#5b52e8', 600:'#4940d6', 700:'#3b34c2', 900:'#1a1760' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-white text-slate-800">
+
+  <!-- Nav -->
+  <header class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+    <a href="/" class="flex items-center gap-2.5">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
+        <rect width="36" height="36" rx="8" fill="#5b52e8" fill-opacity="0.15"/>
+        <circle cx="10" cy="18" r="4" fill="#5b52e8"/>
+        <circle cx="26" cy="18" r="4" fill="#5b52e8" fill-opacity="0.45"/>
+        <line x1="14" y1="18" x2="22" y2="18" stroke="#5b52e8" stroke-width="1.5"/>
+        <polyline points="20,15.5 22.5,18 20,20.5" stroke="#5b52e8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span class="font-mono font-bold text-xl tracking-tight text-slate-900">r<span style="color:#5b52e8">8</span>n</span>
+    </a>
+    <div class="flex items-center gap-4 text-sm">
+      <a href="/at" class="text-slate-500 hover:text-slate-900 transition-colors">AT reference</a>
+      <a href="/triage" class="btn-brand px-4 py-2 rounded-lg font-medium text-sm">Try it free →</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero-gradient text-white px-6 py-20 text-center">
+    <div class="max-w-3xl mx-auto">
+      <div class="inline-flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-full mb-6" style="background:rgba(91,82,232,0.25); color:#c4bfff;">
+        <svg width="10" height="10" viewBox="0 0 36 36" fill="none">
+          <circle cx="10" cy="18" r="4" fill="#c4bfff"/>
+          <circle cx="26" cy="18" r="4" fill="#c4bfff" fill-opacity="0.5"/>
+          <line x1="14" y1="18" x2="22" y2="18" stroke="#c4bfff" stroke-width="2"/>
+          <polyline points="20,15 22.5,18 20,21" stroke="#c4bfff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        No login required · Free forever
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-bold font-mono tracking-tight mb-5 leading-tight">
+        Paste your AT log.<br>
+        <span style="color:#a09bff">Get a diagnosis in seconds.</span>
+      </h1>
+      <p class="text-slate-300 text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+        r8n analyzes modem AT command logs and tells you exactly why your IoT device
+        won't connect — registration denial, APN mismatch, signal issues, band lock,
+        PIN lock, and more.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/triage" class="btn-brand px-6 py-3 rounded-lg font-semibold text-base shadow-lg shadow-brand-900/40">
+          Analyze a log →
+        </a>
+        <a href="/at" class="px-6 py-3 rounded-lg font-semibold text-base border border-white/20 text-slate-200 hover:bg-white/10 transition-colors">
+          Browse AT reference
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- What it covers -->
+  <section class="max-w-5xl mx-auto px-6 py-16">
+    <h2 class="text-center text-xl font-semibold text-slate-700 mb-2">What r8n diagnoses</h2>
+    <p class="text-center text-slate-500 text-sm mb-10">13 detection rules covering the most common cellular IoT failure modes.</p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {% set rules = [
+        ('Registration denied',    'SIM not yet propagated to carrier HSS, or barred on this network.'),
+        ('Wrong APN',              'PDP context won\'t activate because the APN string is incorrect.'),
+        ('Marginal signal',        'RSRP / RSSI near the sensitivity floor — intermittent drops expected.'),
+        ('Band lock',              'Modem locked to a band with no coverage at the deployment site.'),
+        ('SIM PIN locked',         'Modem halted waiting for PIN; device firmware doesn\'t enter it.'),
+        ('PSM too aggressive',     'Power-saving mode keeps the modem unreachable for too long.'),
+        ('Roaming denied',         'Carrier policy blocks data in this country or on this PLMN.'),
+        ('SIM not detected',       'CPIN/CCID errors — physical SIM contact or provisioning issue.'),
+        ('eUICC fallback failure', 'Profile switch didn\'t trigger despite the signal threshold being crossed.'),
+        ('DNS failure',            'PDP context up but DNS resolution failing — data path issue.'),
+        ('Quota exhausted',        'Data cap hit; SIM is live but all traffic is blocked.'),
+        ('Modem unresponsive',     'AT interface not responding — firmware hang or hardware fault.'),
+        ('Healthy baseline',       'Everything looks normal — confirms the log is clean.'),
+      ] %}
+      {% for title, desc in rules %}
+      <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:border-brand-200 transition-colors">
+        <div class="flex items-start gap-2.5">
+          <div class="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style="background:#5b52e8"></div>
+          <div>
+            <div class="font-semibold text-sm text-slate-800">{{ title }}</div>
+            <div class="text-xs text-slate-500 mt-0.5 leading-relaxed">{{ desc }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="bg-slate-50 border-y border-slate-100 px-6 py-16">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2 class="text-xl font-semibold text-slate-700 mb-10">How it works</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 text-left">
+        <div>
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-3 font-mono font-bold text-sm text-white" style="background:#5b52e8">1</div>
+          <div class="font-semibold text-sm mb-1">Paste your AT log</div>
+          <div class="text-slate-500 text-sm">Copy the raw modem transcript from your serial console, UART capture, or SDK log output.</div>
+        </div>
+        <div>
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-3 font-mono font-bold text-sm text-white" style="background:#5b52e8">2</div>
+          <div class="font-semibold text-sm mb-1">Get an instant diagnosis</div>
+          <div class="text-slate-500 text-sm">r8n identifies the fault, surfaces the exact evidence lines, and ranks hypotheses by confidence.</div>
+        </div>
+        <div>
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-3 font-mono font-bold text-sm text-white" style="background:#5b52e8">3</div>
+          <div class="font-semibold text-sm mb-1">Get a draft fix</div>
+          <div class="text-slate-500 text-sm">A ready-to-send customer reply and next-action checklist come with every diagnosis. Copy and go.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Supported hardware -->
+  <section class="max-w-4xl mx-auto px-6 py-14 text-center">
+    <h2 class="text-lg font-semibold text-slate-600 mb-3">Works with any cellular modem</h2>
+    <p class="text-slate-500 text-sm mb-6">r8n is vendor-agnostic. It recognizes logs from all major module families.</p>
+    <div class="flex flex-wrap justify-center gap-3 font-mono text-sm text-slate-600">
+      {% for vendor in ['Quectel BG96/BG95/EC25', 'u-blox SARA-R4/R5/R6', 'SIMCom SIM7080G/SIM800', 'Telit ME910 / LE910', 'Sierra HL7800', 'Nordic nRF9160', 'Any AT-compatible modem'] %}
+      <span class="px-3 py-1.5 bg-slate-100 rounded-full text-xs">{{ vendor }}</span>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="hero-gradient text-white px-6 py-16 text-center">
+    <div class="max-w-lg mx-auto">
+      <h2 class="text-2xl font-bold font-mono mb-4">Ready to diagnose?</h2>
+      <p class="text-slate-300 mb-6 text-sm">No account. No API key. Paste a log and go.</p>
+      <a href="/triage" class="btn-brand inline-block px-8 py-3 rounded-lg font-semibold shadow-lg shadow-brand-900/40">
+        Open the triage tool →
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="px-6 py-6 border-t border-slate-100 text-xs text-slate-400 flex items-center justify-between font-mono">
+    <span>r8n — Continuis Labs</span>
+    <div class="flex gap-4">
+      <a href="/at" class="hover:text-slate-600">AT reference</a>
+      <a href="/portal" class="hover:text-slate-600">Portal</a>
+    </div>
+  </footer>
+
+</body>
+</html>

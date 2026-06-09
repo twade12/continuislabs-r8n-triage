@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Conductor console — r8n{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Conductor console</h1>
+    <p class="text-slate-500 text-sm mt-1">eUICC profile orchestration. Phase 4 demo on top of the alpha Conductor API.</p>
+  </div>
+  <div class="text-sm text-slate-500">{{ hyper_sims|length }} Hyper SIM{{ '' if hyper_sims|length == 1 else 's' }}</div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="font-semibold mb-3">Profile distribution</h2>
+    {% if profile_dist %}
+    <ul class="space-y-2">
+      {% for carrier, n in profile_dist.items() %}
+      <li class="flex items-center justify-between border-b border-slate-100 py-2 text-sm">
+        <span class="font-mono">{{ carrier }}</span>
+        <span>{{ n }} SIM{{ '' if n == 1 else 's' }} active</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="text-sm text-slate-500">No active profile data — Hyper SIMs in mock fleet will appear here.</div>
+    {% endif %}
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="font-semibold mb-3">Active failover policies</h2>
+    <ul class="space-y-3">
+      {% for p in policies %}
+      <li class="border-b border-slate-100 pb-2">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-semibold text-sm">{{ p.name }}</div>
+            <div class="text-xs text-slate-500 mt-0.5">scope: <span class="font-mono">{{ p.scope }}</span></div>
+            <div class="text-xs text-slate-500 mt-0.5 font-mono">{{ p.rule }}</div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs px-2 py-0.5 rounded {% if p.enabled %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-700{% endif %}">{% if p.enabled %}enabled{% else %}disabled{% endif %}</span>
+            <div class="text-xs text-slate-500 mt-1">triggered {{ p.triggered_count }}× this week</div>
+          </div>
+        </div>
+        <form method="post" action="/conductor/policy/{{ p.id }}/toggle" class="inline mt-1">
+          <button class="text-xs text-brand-600 hover:underline">{% if p.enabled %}disable{% else %}enable{% endif %}</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<details class="bg-white border border-slate-200 rounded-lg p-5 mb-6">
+  <summary class="font-semibold cursor-pointer">+ new failover policy</summary>
+  <form method="post" action="/conductor/policy" class="mt-3 space-y-3 max-w-2xl">
+    <div>
+      <label class="block text-sm font-semibold mb-1">Name</label>
+      <input type="text" name="name" required class="w-full border border-slate-300 rounded p-2 text-sm">
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1">Scope <span class="text-slate-400 font-normal">(tag-based)</span></label>
+      <input type="text" name="scope" placeholder="tag:fleet:trucks" class="w-full border border-slate-300 rounded p-2 font-mono text-sm">
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1">Rule</label>
+      <input type="text" name="rule" placeholder="switch_to_next_profile if unregistered_seconds > 300"
+        class="w-full border border-slate-300 rounded p-2 font-mono text-sm">
+    </div>
+    <button class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded text-sm">Create policy</button>
+  </form>
+</details>
+
+<div class="bg-white border border-slate-200 rounded-lg p-5">
+  <h2 class="font-semibold mb-3">Recent profile switches</h2>
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-xs text-slate-500 uppercase tracking-wider border-b border-slate-200">
+      <th class="pb-2">When</th><th class="pb-2">ICCID</th><th class="pb-2">Switch</th><th class="pb-2">Trigger</th>
+    </tr></thead>
+    <tbody>
+      {% for s in switches %}
+      <tr class="border-b border-slate-100">
+        <td class="py-2 text-xs text-slate-500">{{ s.ts }}</td>
+        <td class="py-2 font-mono text-xs">{{ s.iccid }}</td>
+        <td class="py-2 text-xs">{{ s.old_profile }} → <span class="font-semibold">{{ s.new_profile }}</span></td>
+        <td class="py-2 text-xs font-mono">{{ s.trigger }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

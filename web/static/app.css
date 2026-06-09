@@ -1,0 +1,77 @@
+/* Minimal additions on top of Tailwind. Most styling lives in templates. */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;600;700&display=swap');
+
+pre.atlog {
+  font-family: 'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Sidebar nav active state */
+.nav-link--active {
+  color: #f1f0fe !important;
+  background: rgba(91, 82, 232, 0.14);
+  border-left: 2px solid #5b52e8;
+  padding-left: 18px;
+}
+
+/* Confidence indicators */
+.confidence-high   { color: #b91c1c; font-weight: 600; }
+.confidence-medium { color: #b45309; font-weight: 600; }
+.confidence-low    { color: #5b52e8; font-weight: 600; }
+
+/* Health badges */
+.health-healthy  { background-color: #dcfce7; color: #166534; }
+.health-degraded { background-color: #fef3c7; color: #92400e; }
+.health-broken   { background-color: #fee2e2; color: #991b1b; }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #e5e7eb;
+  border-top-color: #5b52e8;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* HTMX request indicator */
+.htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+.htmx-request .htmx-indicator { opacity: 1; }
+.htmx-request.htmx-indicator  { opacity: 1; }
+
+/* Landing page gradient hero */
+.hero-gradient {
+  background: linear-gradient(135deg, #111118 0%, #1a1760 50%, #111118 100%);
+}
+
+/* Brand button */
+.btn-brand {
+  background: #5b52e8;
+  color: #fff;
+  transition: background 150ms;
+}
+.btn-brand:hover { background: #4940d6; }
+
+/* Sample log pill buttons */
+.sample-pill {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: border-color 150ms, color 150ms, background 150ms;
+  background: #fff;
+  color: #475569;
+}
+.sample-pill:hover {
+  border-color: #5b52e8;
+  color: #5b52e8;
+  background: #f3f2fd;
+}

@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+*.so
+
+# Environment & secrets
+.env
+
+# Database (persist outside repo in production)
+web/*.sqlite
+web/*.sqlite-wal
+web/*.sqlite-shm
+
+# Pytest
+.pytest_cache/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# macOS
+.DS_Store
+
+# Logs
+*.log

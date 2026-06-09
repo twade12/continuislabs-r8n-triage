@@ -1,0 +1,33 @@
+r8n.continuislabs.cloud {
+    # Automatic TLS via Let's Encrypt — just works.
+
+    # Gzip compression
+    encode gzip
+
+    # Rate limit the triage endpoints to prevent abuse
+    # (requires caddy-ratelimit plugin — see README deploy notes)
+    # rate_limit /triage/diagnose 10r/m
+    # rate_limit /portal/triage/diagnose 10r/m
+
+    # Proxy everything to uvicorn
+    reverse_proxy 127.0.0.1:8000
+
+    # Cache static assets
+    @static path /static/*
+    header @static Cache-Control "public, max-age=86400, immutable"
+
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Access log
+    log {
+        output file /var/log/caddy/r8n-access.log
+        format json
+    }
+}

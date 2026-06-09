@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}AT reference — r8n{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-2">AT command reference</h1>
+<p class="text-slate-500 text-sm mb-6">Catalogue + response decoder for the commands SEs see in the wild.</p>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <h3 class="font-semibold mb-2">Decode a response line</h3>
+    <form hx-post="/at/decode" hx-target="#decode-result" hx-swap="innerHTML" class="flex gap-2">
+      <input name="line" placeholder='+CGPADDR: 1,"100.66.18.214"'
+        class="flex-1 border border-slate-300 rounded p-2 font-mono text-xs"
+        autocomplete="off">
+      <button class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded text-sm">Decode</button>
+    </form>
+    <div id="decode-result" class="mt-3"></div>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <h3 class="font-semibold mb-2">Look up a command</h3>
+    <form hx-get="/at/lookup" hx-target="#lookup-result" hx-swap="innerHTML" class="flex gap-2">
+      <input name="name" placeholder="AT+QIOPEN  /  CGPADDR  /  CEREG"
+        class="flex-1 border border-slate-300 rounded p-2 font-mono text-xs"
+        autocomplete="off">
+      <button class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded text-sm">Look up</button>
+    </form>
+    <div id="lookup-result" class="mt-3"></div>
+  </div>
+</div>
+
+<div>
+  <h2 class="font-semibold mb-3">Browse by vendor</h2>
+  {% for vendor, cmds in by_vendor.items() %}
+  <div class="bg-white border border-slate-200 rounded-lg p-5 mb-4">
+    <h3 class="font-semibold mb-2 text-slate-700">[{{ vendor }}]</h3>
+    <ul class="grid grid-cols-1 md:grid-cols-2 gap-1 text-sm">
+      {% for c in cmds %}
+      <li class="py-1">
+        <span class="font-mono text-xs text-brand-600">AT{{ c.name }}</span>
+        <span class="text-slate-600 ml-2">{{ c.purpose }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

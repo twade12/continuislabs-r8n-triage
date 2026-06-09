@@ -1,0 +1,36 @@
+[project]
+name = "r8n-triage"
+version = "0.1.0"
+description = "IoT connectivity triage tool — paste a modem AT log, get an instant diagnosis and draft fix"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12.0",
+    "httpx>=0.27.0",
+    "rich>=13.0.0",
+    "tomli>=2.0.0;python_version<'3.11'",
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+hgm = "hologram_cli.cli:app"
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

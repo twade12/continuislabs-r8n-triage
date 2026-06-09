@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ customer_name }} — Customer portal{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">{{ customer_name }}</h1>
+    <p class="text-slate-500 text-sm mt-1">Customer self-service portal — scoped to your org. (Phase 5 demo — read-only.)</p>
+  </div>
+  <a href="/portal/triage" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded text-sm">Self-serve triage</a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <div class="text-xs uppercase text-slate-500 tracking-wider">Your SIMs</div>
+    <div class="text-3xl font-semibold mt-1">{{ sims|length }}</div>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <div class="text-xs uppercase text-slate-500 tracking-wider">Connected</div>
+    <div class="text-3xl font-semibold mt-1 text-green-700">
+      {{ sims|selectattr('state', 'equalto', 'LIVE')|list|length }}
+    </div>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <div class="text-xs uppercase text-slate-500 tracking-wider">Need attention</div>
+    <div class="text-3xl font-semibold mt-1 text-red-700">
+      {{ sims|rejectattr('state', 'equalto', 'LIVE')|list|length }}
+    </div>
+  </div>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-lg p-5 mb-6">
+  <h2 class="font-semibold mb-3">Your SIMs</h2>
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-xs text-slate-500 uppercase tracking-wider border-b border-slate-200">
+      <th class="pb-2">ICCID</th><th class="pb-2">Name</th><th class="pb-2">State</th><th class="pb-2">Last seen</th>
+    </tr></thead>
+    <tbody>
+      {% for s in sims %}
+      <tr class="border-t border-slate-100">
+        <td class="py-2 font-mono text-xs">{{ s.iccid }}</td>
+        <td class="py-2 text-sm">{{ s.name or '—' }}</td>
+        <td class="py-2 text-sm">{{ s.state }}</td>
+        <td class="py-2 text-xs text-slate-500">
+          {% if s.last_session %}{{ s.last_session.country }} / {{ s.last_session.operator }}{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="py-4 text-center text-slate-500 text-sm">No SIMs in this scope.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="bg-brand-50 border border-brand-100 rounded-lg p-5">
+  <h2 class="font-semibold">Self-serve triage</h2>
+  <p class="text-sm text-slate-600 mt-2">
+    Have a device that won't connect? Paste the AT log into our analyzer and get the same diagnosis our SE team uses.
+    Saves you the back-and-forth on the obvious issues.
+  </p>
+  <a href="/portal/triage" class="inline-block mt-3 bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded text-sm">Try it →</a>
+</div>
+{% endblock %}

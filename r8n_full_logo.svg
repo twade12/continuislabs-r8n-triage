@@ -1,0 +1,14 @@
+<svg width="576" height="192" viewBox="0 0 192.0 64"
+  fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="r8n">
+  <circle cx="17.92" cy="32.0" r="8.96" fill="#6C63FF"/>
+  <circle cx="46.08" cy="32.0" r="8.96" fill="#6C63FF" fill-opacity="0.45"/>
+  <line x1="26.88" y1="32.0" x2="37.12" y2="32.0"
+    stroke="#6C63FF" stroke-width="3.52"/>
+  <polyline points="33.28,23.04 38.4,32.0 33.28,40.96"
+    stroke="#6C63FF" stroke-width="3.52" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <text x="67.2" y="46.72"
+    font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, monospace"
+    font-size="46.08" font-weight="700" letter-spacing="-0.5" fill="#F2F2F5">
+    r<tspan fill="#6C63FF">8</tspan>n
+  </text>
+</svg>

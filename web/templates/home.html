@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — r8n{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-2">Dashboard</h1>
+<p class="text-slate-500 mb-6">Solutions Engineer workbench. Quick triage, fleet visibility, knowledge base, all in one place.</p>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <div class="text-xs uppercase text-slate-500 tracking-wider">SIMs</div>
+    <div class="text-3xl font-semibold mt-1">{{ sim_count }}</div>
+    <div class="text-xs text-slate-500 mt-1">across mock fleet</div>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <div class="text-xs uppercase text-slate-500 tracking-wider">Triage sessions</div>
+    <div class="text-3xl font-semibold mt-1">{{ recent_sessions|length }}</div>
+    <div class="text-xs text-slate-500 mt-1">recent (last 8)</div>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <div class="text-xs uppercase text-slate-500 tracking-wider">Connected</div>
+    <div class="text-3xl font-semibold mt-1 text-green-700">{{ state_distribution.get('LIVE', 0) }}</div>
+    <div class="text-xs text-slate-500 mt-1">active sessions</div>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-lg p-4">
+    <div class="text-xs uppercase text-slate-500 tracking-wider">Paused (system)</div>
+    <div class="text-3xl font-semibold mt-1 text-red-700">{{ state_distribution.get('PAUSED-SYS', 0) }}</div>
+    <div class="text-xs text-slate-500 mt-1">need investigation</div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-semibold">Fault distribution (last 30 days)</h2>
+      <a href="/fleet" class="text-xs text-brand-600 hover:underline">View fleet health →</a>
+    </div>
+    {% if rule_counts %}
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs text-slate-500 uppercase tracking-wider">
+          <th class="pb-2">Rule</th><th class="pb-2 text-right">Count</th>
+        </tr></thead>
+        <tbody>
+          {% for rc in rule_counts %}
+          <tr class="border-t border-slate-100">
+            <td class="py-2 font-mono">{{ rc.rule_id }}</td>
+            <td class="py-2 text-right">{{ rc.count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="text-sm text-slate-500">No triage sessions saved yet. <a href="/triage" class="text-brand-600 hover:underline">Run a diagnosis →</a></div>
+    {% endif %}
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-semibold">Recent triage sessions</h2>
+      <a href="/audit" class="text-xs text-brand-600 hover:underline">View audit log →</a>
+    </div>
+    {% if recent_sessions %}
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs text-slate-500 uppercase tracking-wider">
+          <th class="pb-2">When</th><th class="pb-2">Top rule</th><th class="pb-2">Vendor</th>
+        </tr></thead>
+        <tbody>
+          {% for s in recent_sessions %}
+          <tr class="border-t border-slate-100">
+            <td class="py-2 text-slate-500 text-xs">{{ s.ts }}</td>
+            <td class="py-2 font-mono"><a href="/audit/{{ s.id }}" class="text-brand-600 hover:underline">{{ s.top_rule_id or '—' }}</a></td>
+            <td class="py-2">{{ s.vendor or '—' }} {{ s.module or '' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="text-sm text-slate-500">No sessions saved. The Triage Workbench writes here when "save to audit" is checked.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="mt-6 bg-brand-50 border border-brand-100 rounded-lg p-5">
+  <h2 class="font-semibold mb-3">Get started</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+    <a href="/triage" class="bg-white border border-slate-200 rounded p-4 hover:border-brand-500 transition">
+      <div class="font-semibold">Triage a log</div>
+      <div class="text-slate-500 mt-1">Paste an AT log and get diagnosis + draft customer reply.</div>
+    </a>
+    <a href="/sims" class="bg-white border border-slate-200 rounded p-4 hover:border-brand-500 transition">
+      <div class="font-semibold">Browse SIMs</div>
+      <div class="text-slate-500 mt-1">Filter by state, tag, or search by ICCID/IMEI.</div>
+    </a>
+    <a href="/codex" class="bg-white border border-slate-200 rounded p-4 hover:border-brand-500 transition">
+      <div class="font-semibold">Search the codex</div>
+      <div class="text-slate-500 mt-1">Pre-resolved cases by vendor, module, and symptom.</div>
+    </a>
+  </div>
+</div>
+{% endblock %}

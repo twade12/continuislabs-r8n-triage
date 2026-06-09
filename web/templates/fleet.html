@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Fleet health — r8n{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-2">Fleet health</h1>
+<p class="text-slate-500 text-sm mb-6">Cross-cutting analytics aggregated from the audit log and the SIM fleet.</p>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="font-semibold mb-3">Top fault rules (last 30 days)</h2>
+    {% if rule_counts %}
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-xs text-slate-500 uppercase tracking-wider">
+        <th class="pb-2">Rule</th><th class="pb-2 text-right">Count</th>
+      </tr></thead>
+      <tbody>
+        {% for rc in rule_counts %}
+        <tr class="border-t border-slate-100">
+          <td class="py-2 font-mono"><a href="/audit?rule_id={{ rc.rule_id }}" class="text-brand-600 hover:underline">{{ rc.rule_id }}</a></td>
+          <td class="py-2 text-right">{{ rc.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-sm text-slate-500">No diagnoses saved yet. Use the triage workbench with "save to audit" enabled.</div>
+    {% endif %}
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="font-semibold mb-3">By module</h2>
+    {% if by_module %}
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-xs text-slate-500 uppercase tracking-wider">
+        <th class="pb-2">Vendor / module</th><th class="pb-2 text-right">Total</th><th class="pb-2 text-right">Faults</th>
+      </tr></thead>
+      <tbody>
+        {% for r in by_module %}
+        <tr class="border-t border-slate-100">
+          <td class="py-2 text-xs">{{ r.vendor }} / {{ r.module or '—' }}</td>
+          <td class="py-2 text-right">{{ r.n }}</td>
+          <td class="py-2 text-right text-red-700">{{ r.faults }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-sm text-slate-500">Module-level stats will appear once triage sessions are saved.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="font-semibold mb-3">SIM state distribution</h2>
+    <div class="space-y-2">
+      {% for state, n in state_dist.items() %}
+      <div class="flex items-center justify-between border-b border-slate-100 py-1">
+        <span class="font-mono text-sm">{{ state }}</span>
+        <span class="text-sm">{{ n }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="font-semibold mb-3">SIMs by tag</h2>
+    <div class="space-y-2">
+      {% for tag, n in tag_dist.items() %}
+      <div class="flex items-center justify-between border-b border-slate-100 py-1">
+        <a href="/sims?tag={{ tag }}" class="text-sm font-mono text-brand-600 hover:underline">{{ tag }}</a>
+        <span class="text-sm">{{ n }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if hot_groups %}
+<div class="bg-white border border-slate-200 rounded-lg p-5">
+  <h2 class="font-semibold mb-3">Hot groups (most SIMs in trouble)</h2>
+  <p class="text-xs text-slate-500 mb-3">Tag groups with at least one SIM currently in PAUSED-SYS or LIVE-PENDING.</p>
+  <ul class="space-y-2">
+    {% for tag, items in hot_groups %}
+    <li class="border-b border-slate-100 py-2 flex items-center justify-between">
+      <a href="/sims?tag={{ tag }}" class="font-mono text-sm text-brand-600 hover:underline">{{ tag }}</a>
+      <span class="text-xs text-red-700">{{ items|length }} SIM{{ '' if items|length == 1 else 's' }} in trouble</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

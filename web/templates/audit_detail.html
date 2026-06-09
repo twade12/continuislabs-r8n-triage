@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Session {{ s.id[:8] }} — r8n{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="/audit" class="text-xs text-brand-600 hover:underline">← back to audit log</a>
+</div>
+
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Triage session</h1>
+    <div class="text-xs text-slate-500 mt-1 font-mono">{{ s.id }}</div>
+  </div>
+  <div class="text-sm text-slate-500">{{ s.ts }}</div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="space-y-4">
+    {% if s.customer_msg %}
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <h3 class="text-sm font-semibold mb-2">Customer message</h3>
+      <div class="text-sm text-slate-700 whitespace-pre-wrap">{{ s.customer_msg }}</div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold">AT log</h3>
+        <span class="text-xs text-slate-500">{{ s.vendor or '—' }} {{ s.module or '' }}</span>
+      </div>
+      <pre class="atlog bg-slate-50 border border-slate-200 rounded p-3">{{ s.raw_log }}</pre>
+    </div>
+
+    {% if s.reply_drafted %}
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <h3 class="text-sm font-semibold mb-2">Reply drafted</h3>
+      <pre class="atlog bg-slate-50 border border-slate-200 rounded p-3">{{ s.reply_drafted }}</pre>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="space-y-4">
+    {% set d = s.diagnosis %}
+    {% set health_class = "health-healthy" if d.health == "healthy" else ("health-degraded" if d.health == "degraded" else "health-broken") %}
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold">Diagnosis</h3>
+        <span class="text-xs px-2 py-0.5 rounded {{ health_class }}">{{ d.health|upper }}</span>
+      </div>
+      <div class="text-sm">{{ d.summary }}</div>
+    </div>
+
+    {% for h in d.hypotheses %}
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-1">
+        <div class="text-xs text-slate-500">#{{ loop.index }} · <a href="/audit?rule_id={{ h.rule_id }}" class="font-mono hover:underline">{{ h.rule_id }}</a></div>
+        <span class="confidence-{{ h.confidence }} text-xs uppercase">{{ h.confidence }}</span>
+      </div>
+      <div class="font-semibold text-sm">{{ h.title }}</div>
+      <div class="text-sm text-slate-700 mt-1">{{ h.explanation }}</div>
+    </div>
+    {% endfor %}
+
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <h3 class="text-sm font-semibold mb-2">Outcome</h3>
+      <form method="post" action="/audit/{{ s.id }}/outcome" class="space-y-2">
+        <select name="outcome" class="border border-slate-300 rounded p-2 text-sm w-full">
+          <option value="">— pick outcome —</option>
+          <option value="resolved" {% if s.outcome == 'resolved' %}selected{% endif %}>resolved</option>
+          <option value="escalated" {% if s.outcome == 'escalated' %}selected{% endif %}>escalated</option>
+          <option value="abandoned" {% if s.outcome == 'abandoned' %}selected{% endif %}>abandoned</option>
+        </select>
+        <input name="cause" type="text" value="{{ s.outcome_cause or '' }}" placeholder="confirmed root cause"
+          class="border border-slate-300 rounded p-2 text-sm w-full">
+        <input name="ticket_ref" type="text" value="{{ s.ticket_ref or '' }}" placeholder="ticket ref (e.g. zendesk:#4421)"
+          class="border border-slate-300 rounded p-2 text-sm w-full font-mono">
+        <button class="bg-brand-600 text-white px-3 py-1.5 rounded text-sm">Save outcome</button>
+      </form>
+      <div class="mt-3 text-xs">
+        <a href="/codex/new?from_session={{ s.id }}" class="text-brand-600 hover:underline">Save to codex KB →</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

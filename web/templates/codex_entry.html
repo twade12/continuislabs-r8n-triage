@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ e.title }} — Codex{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="/codex" class="text-xs text-brand-600 hover:underline">← back to codex</a>
+</div>
+
+<div class="flex items-start justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">{{ e.title }}</h1>
+    <div class="text-sm text-slate-500 mt-1">
+      {{ e.vendor or 'any vendor' }} / {{ e.module or 'any module' }}
+      {% if e.carrier %}· {{ e.carrier }}{% endif %}
+      {% if e.rat %}· {{ e.rat }}{% endif %}
+      · created {{ e.created_at }}
+    </div>
+  </div>
+  <form method="post" action="/codex/{{ e.id }}/upvote" class="inline">
+    <button class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-3 py-1.5 rounded text-sm">▲ {{ e.upvotes }}</button>
+  </form>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-sm font-semibold mb-2 text-slate-500 uppercase tracking-wider">Diagnosis</h2>
+    <div class="text-sm whitespace-pre-wrap">{{ e.diagnosis }}</div>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-sm font-semibold mb-2 text-slate-500 uppercase tracking-wider">Fix</h2>
+    <div class="text-sm whitespace-pre-wrap font-mono">{{ e.fix }}</div>
+  </div>
+</div>
+
+{% if e.symptom_tags %}
+<div class="bg-white border border-slate-200 rounded-lg p-4 mt-4">
+  <div class="text-xs text-slate-500 uppercase tracking-wider mb-2">Symptom tags</div>
+  <div class="flex flex-wrap gap-1">
+    {% for t in e.symptom_tags %}<a href="/codex?symptom={{ t }}" class="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded font-mono">{{ t }}</a>{% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if e.ticket_refs %}
+<div class="bg-white border border-slate-200 rounded-lg p-4 mt-4">
+  <div class="text-xs text-slate-500 uppercase tracking-wider mb-2">Referenced tickets</div>
+  <div class="text-sm font-mono">{{ e.ticket_refs|join(', ') }}</div>
+</div>
+{% endif %}
+{% endblock %}
