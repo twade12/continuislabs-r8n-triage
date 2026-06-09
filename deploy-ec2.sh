@@ -6,7 +6,7 @@
 #   bash deploy-ec2.sh
 set -euo pipefail
 
-REPO_URL="https://github.com/continuislabs/r8n-triage.git"
+REPO_URL="https://github.com/twade12/continuislabs-r8n-triage.git"
 APP_DIR="$HOME/r8n-triage"
 
 echo ""
