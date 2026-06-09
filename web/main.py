@@ -15,14 +15,12 @@ from __future__ import annotations
 import json
 import os
 import re
-import secrets
 from collections import Counter
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -57,28 +55,23 @@ templates.env.globals["posthog_host"] = os.environ.get("POSTHOG_HOST", "https://
 
 # ---- Auth ------------------------------------------------------------------
 
-_security = HTTPBasic(auto_error=False)
+
+class _LoginRequired(Exception):
+    def __init__(self, next_path: str):
+        self.next_path = next_path
 
 
-def _admin_auth(credentials: HTTPBasicCredentials | None = Depends(_security)) -> str:
-    """Require HTTP Basic Auth for admin routes. Credentials from env vars."""
-    expected_user = os.environ.get("ADMIN_USER", "admin").encode()
-    expected_pass = os.environ.get("ADMIN_PASS", "changeme").encode()
-    if credentials is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    user_ok = secrets.compare_digest(credentials.username.encode(), expected_user)
-    pass_ok = secrets.compare_digest(credentials.password.encode(), expected_pass)
-    if not (user_ok and pass_ok):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
+@app.exception_handler(_LoginRequired)
+async def _login_required_handler(request: Request, exc: _LoginRequired) -> RedirectResponse:
+    return RedirectResponse(f"/auth/login?next={exc.next_path}", status_code=303)
+
+
+def _require_login(request: Request) -> dict:
+    """Redirect to /auth/login for routes that require an authenticated session."""
+    user = get_current_user(request)
+    if not user:
+        raise _LoginRequired(next_path=str(request.url.path))
+    return user
 
 
 # ---- Sample log registry ---------------------------------------------------
@@ -245,7 +238,7 @@ def triage_diagnose(
 
 
 @app.get("/dash", response_class=HTMLResponse)
-def home(request: Request, _: str = Depends(_admin_auth)) -> HTMLResponse:
+def home(request: Request, _: dict = Depends(_require_login)) -> HTMLResponse:
     rule_counts = db.aggregate_by_rule(days=30)
     recent = db.list_triage(limit=8)
     sims = mock_data.list_sims()
@@ -268,7 +261,7 @@ def home(request: Request, _: str = Depends(_admin_auth)) -> HTMLResponse:
 
 
 @app.get("/sims/{iccid}", response_class=HTMLResponse)
-def sim_detail(request: Request, iccid: str, _: str = Depends(_admin_auth)) -> HTMLResponse:
+def sim_detail(request: Request, iccid: str, _: dict = Depends(_require_login)) -> HTMLResponse:
     sim = mock_data.get_sim(iccid)
     if sim is None:
         return HTMLResponse(f"<h2>SIM not found: {iccid}</h2>", status_code=404)
@@ -296,7 +289,7 @@ def sims_index(
     state: Optional[str] = None,
     tag: Optional[str] = None,
     q: Optional[str] = None,
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> HTMLResponse:
     sims = mock_data.list_sims()
     if state:
@@ -333,7 +326,7 @@ def sims_index(
 def audit_log(
     request: Request,
     rule_id: Optional[str] = None,
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> HTMLResponse:
     sessions = db.list_triage(limit=200, rule_id=rule_id)
     return templates.TemplateResponse(
@@ -349,7 +342,7 @@ def audit_log(
 
 
 @app.get("/audit/{sid}", response_class=HTMLResponse)
-def audit_detail(request: Request, sid: str, _: str = Depends(_admin_auth)) -> HTMLResponse:
+def audit_detail(request: Request, sid: str, _: dict = Depends(_require_login)) -> HTMLResponse:
     session = db.get_triage(sid)
     if not session:
         return HTMLResponse("<h2>Session not found</h2>", status_code=404)
@@ -366,7 +359,7 @@ def audit_save_outcome(
     outcome: str = Form(...),
     cause: str = Form(""),
     ticket_ref: str = Form(""),
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> RedirectResponse:
     db.update_triage_outcome(sid, outcome, cause or None, ticket_ref or None)
     return RedirectResponse(f"/audit/{sid}", status_code=303)
@@ -379,7 +372,7 @@ def codex_index(
     module: Optional[str] = None,
     symptom: Optional[str] = None,
     q: Optional[str] = None,
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> HTMLResponse:
     entries = db.list_codex(vendor=vendor, module=module, symptom=symptom, q=q)
     all_entries = db.list_codex()
@@ -408,7 +401,7 @@ def codex_index(
 def codex_new_form(
     request: Request,
     from_session: Optional[str] = None,
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> HTMLResponse:
     prefill = {}
     if from_session:
@@ -441,7 +434,7 @@ def codex_create(
     diagnosis: str = Form(""),
     fix: str = Form(""),
     source_session_id: str = Form(""),
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> RedirectResponse:
     tags = [t.strip() for t in symptom_tags.split(",") if t.strip()]
     cid = db.save_codex(
@@ -459,7 +452,7 @@ def codex_create(
 
 
 @app.get("/codex/{cid}", response_class=HTMLResponse)
-def codex_detail(request: Request, cid: str, _: str = Depends(_admin_auth)) -> HTMLResponse:
+def codex_detail(request: Request, cid: str, _: dict = Depends(_require_login)) -> HTMLResponse:
     entry = db.get_codex(cid)
     if not entry:
         return HTMLResponse("<h2>Entry not found</h2>", status_code=404)
@@ -471,7 +464,7 @@ def codex_detail(request: Request, cid: str, _: str = Depends(_admin_auth)) -> H
 
 
 @app.post("/codex/{cid}/upvote")
-def codex_upvote(cid: str, _: str = Depends(_admin_auth)) -> RedirectResponse:
+def codex_upvote(cid: str, _: dict = Depends(_require_login)) -> RedirectResponse:
     db.upvote_codex(cid)
     return RedirectResponse(f"/codex/{cid}", status_code=303)
 
@@ -518,7 +511,7 @@ def at_lookup(request: Request, name: str) -> HTMLResponse:
 
 
 @app.get("/search", response_class=HTMLResponse)
-def global_search(request: Request, q: str = "", _: str = Depends(_admin_auth)) -> HTMLResponse:
+def global_search(request: Request, q: str = "", _: dict = Depends(_require_login)) -> HTMLResponse:
     sim_hits = []
     if q:
         sim = mock_data.get_sim(q)
@@ -552,7 +545,7 @@ def global_search(request: Request, q: str = "", _: str = Depends(_admin_auth)) 
 
 
 @app.get("/fleet", response_class=HTMLResponse)
-def fleet_health(request: Request, _: str = Depends(_admin_auth)) -> HTMLResponse:
+def fleet_health(request: Request, _: dict = Depends(_require_login)) -> HTMLResponse:
     rule_counts = db.aggregate_by_rule(days=30)
     by_module = db.aggregate_by_module()
     sims = mock_data.list_sims()
@@ -589,7 +582,7 @@ def fleet_health(request: Request, _: str = Depends(_admin_auth)) -> HTMLRespons
 
 
 @app.get("/bulk", response_class=HTMLResponse)
-def bulk_index(request: Request, _: str = Depends(_admin_auth)) -> HTMLResponse:
+def bulk_index(request: Request, _: dict = Depends(_require_login)) -> HTMLResponse:
     sims = mock_data.list_sims()
     recent = db.list_bulk_ops()
     return templates.TemplateResponse(
@@ -609,7 +602,7 @@ def bulk_execute(
     op_type: str = Form(...),
     iccids: list[str] = Form(...),
     note: str = Form(""),
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> RedirectResponse:
     db.save_bulk_op(
         op_type=op_type,
@@ -623,7 +616,7 @@ def bulk_execute(
 def onboard_wizard(
     request: Request,
     step: int = 1,
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
@@ -640,13 +633,13 @@ def onboard_wizard(
 def onboard_submit(
     step: int = Form(...),
     next_step: int = Form(...),
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> RedirectResponse:
     return RedirectResponse(f"/onboard?step={next_step}", status_code=303)
 
 
 @app.get("/conductor", response_class=HTMLResponse)
-def conductor_console(request: Request, _: str = Depends(_admin_auth)) -> HTMLResponse:
+def conductor_console(request: Request, _: dict = Depends(_require_login)) -> HTMLResponse:
     sims = mock_data.list_sims()
     hyper = [s for s in sims if "hyper-sim" in (s.get("tags") or []) or s.get("euicc_profiles")]
     profile_dist: Counter = Counter()
@@ -676,14 +669,14 @@ def conductor_create_policy(
     name: str = Form(...),
     scope: str = Form(...),
     rule: str = Form(...),
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> RedirectResponse:
     db.save_policy(name, scope, rule)
     return RedirectResponse("/conductor", status_code=303)
 
 
 @app.post("/conductor/policy/{pid}/toggle")
-def conductor_toggle_policy(pid: str, _: str = Depends(_admin_auth)) -> RedirectResponse:
+def conductor_toggle_policy(pid: str, _: dict = Depends(_require_login)) -> RedirectResponse:
     db.toggle_policy(pid)
     return RedirectResponse("/conductor", status_code=303)
 
@@ -692,7 +685,7 @@ def conductor_toggle_policy(pid: str, _: str = Depends(_admin_auth)) -> Redirect
 def conductor_switch(
     iccid: str,
     new_profile: str = Form(...),
-    _: str = Depends(_admin_auth),
+    _: dict = Depends(_require_login),
 ) -> RedirectResponse:
     sim = mock_data.get_sim(iccid)
     old = "unknown"
