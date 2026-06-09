@@ -1,0 +1,43 @@
+# Scenario: REGISTRATION DENIED (Sierra Wireless dialect) — Sierra HL7800 freshly
+# activated SIM operating in Brazil. Same fault class as fixture 02 but on a
+# different module/region/network. Tests whether the registration_denied_hss
+# rule generalizes across modules (it should — relies on standard +CEREG and
+# +CGATT, not vendor-specific commands).
+# Expected SE diagnosis: registration denied — likely fresh-activation HSS
+# propagation. (No +COPS=? scan with forbidden PLMNs, so it's NOT roaming denial.)
+# Customer guidance: wait 30-60 min after activation, power-cycle, recheck.
+
+AT
+OK
+ATI
+Sierra Wireless
+HL7800
+HL7800.4.4.14.0
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CSQ
++CSQ: 17,99
+OK
+AT+KSRAT?
++KSRAT: 1
+OK
+AT+COPS?
++COPS: 0,0,"VIVO BR",7
+OK
+AT+CEREG?
++CEREG: 0,3
+OK
+AT+CGREG?
++CGREG: 0,0
+OK
+AT+CGDCONT=1,"IP","hologram"
+OK
+AT+CGATT=1
++CME ERROR: 30
+AT+CEER
++CEER: "EMM cause: #8"
+OK

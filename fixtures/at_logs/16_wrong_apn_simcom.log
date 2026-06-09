@@ -1,0 +1,42 @@
+# Scenario: WRONG APN (SIMCom dialect) — SIMCom SIM7600G-H. Customer set APN
+# to "mobiledata" (probably a leftover from a tablet config) instead of
+# "hologram". Same fault class as fixture 05 but on a different vendor and
+# with a different error code path: this module returns +CME ERROR: 100
+# rather than a bare ERROR for PDP activation failure. Tests whether the
+# wrong_apn rule still fires (it relies on +CGACT being errored AND either
+# wrong APN string OR +CEER cause 33).
+# Expected SE diagnosis: APN mismatch.
+# Customer guidance: AT+CGDCONT=1,"IP","hologram"; bounce CFUN.
+
+AT
+OK
+ATI
+SIMCOM_Ltd
+SIMCOM_SIM7600G-H
+Revision:LE20B04SIM7600G-H
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CGDCONT?
++CGDCONT: 1,"IP","mobiledata","",0,0,0,0
+OK
+AT+CSQ
++CSQ: 22,99
+OK
+AT+COPS?
++COPS: 0,0,"AT&T",8
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CGACT=1,1
++CME ERROR: 100
+AT+CEER
++CEER: "Activation reject"," cause 33: requested service option not subscribed"
+OK

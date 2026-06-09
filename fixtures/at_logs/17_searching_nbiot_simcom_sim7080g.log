@@ -1,0 +1,42 @@
+# Scenario: SEARCHING NEVER REGISTERS (SIMCom dialect) — SIMCom SIM7080G locked
+# to NB-IoT (AT+CMNB=2 in SIMCom syntax) in an area with only Cat-M coverage.
+# Same fault class as fixture 03 but the RAT-mode command is +CMNB (SIMCom)
+# rather than +QCFG="iotopmode" (Quectel). Tests whether the searching rule
+# generalizes across vendors — likely a GAP since the rule explicitly looks
+# for the Quectel command name.
+# Expected SE diagnosis: RAT mismatch — modem locked to NB-IoT but coverage is Cat-M.
+# Customer guidance:
+#   For SIMCom: AT+CMNB=3      (3 = Cat-M & NB-IoT)
+#   AT+CFUN=0  /  AT+CFUN=1    (restart radio)
+#   Verify with AT+COPS=? after restart.
+
+AT
+OK
+ATI
+SIMCOM_Ltd
+SIMCOM_SIM7080G
+Revision:1529B07SIM7080
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CMNB?
++CMNB: 2
+OK
+AT+CFUN=1
+OK
+AT+CSQ
++CSQ: 8,99
+OK
+AT+CSQN
++CSQN: -119,-128,118,-19
+OK
+AT+CEREG?
++CEREG: 0,2
+OK
+AT+CGATT?
++CGATT: 0
+OK
+AT+COPS=?
++COPS: (1,"AT&T","AT&T","310410",9),(1,"T-Mobile","TMO","310260",9),,(0-4),(0,1,2)
+OK

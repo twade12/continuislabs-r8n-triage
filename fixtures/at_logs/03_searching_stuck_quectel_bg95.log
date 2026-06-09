@@ -1,0 +1,51 @@
+# Scenario: SEARCHING NEVER REGISTERS — Quectel BG95-M3 attempting NB-IoT (Cat-NB1)
+# in a rural deployment with sparse NB-IoT coverage. Modem cycles through scan but
+# never registers.
+# Key signals:
+#   +QCFG: "iotopmode",1     (NB-IoT only — Cat-M is disabled)
+#   +CSQ: 9,99               (very weak)
+#   +QCSQ: NBIOT, RSRP -118  (at the edge of NB1 sensitivity, ~-120 dBm)
+#   +CEREG: 2,2,,,,          (searching, never reaches 1 or 5)
+#   +CGATT: 0
+# Diagnosis: device is RAT-locked to NB-IoT but local towers offer Cat-M1, OR
+# the NB-IoT signal is below usable threshold. NB-IoT propagates further than Cat-M
+# but requires a tower that explicitly broadcasts NB1.
+# Customer guidance:
+#   1. Allow both RATs:  AT+QCFG="iotopmode",2,1   (mode 2 = Cat-M & NB-IoT)
+#   2. Verify with: AT+QCFG="nwscanseq",020301,1   (Cat-M first, then NB-IoT, then GSM)
+#   3. Power-cycle and observe +CEREG transitions.
+# If still stuck, pull coverage map for the deployment site and confirm RAT availability.
+
+AT
+OK
+ATI
+Quectel
+BG95-M3
+Revision: BG95M3LAR02A03
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+QCFG="iotopmode"
++QCFG: "iotopmode",1
+OK
+AT+QCFG="nwscanseq"
++QCFG: "nwscanseq",030201,1
+OK
+AT+CSQ
++CSQ: 9,99
+OK
+AT+QCSQ
++QCSQ: "NBIOT",-118,-128,118,-19
+OK
+AT+CEREG=2
+OK
+AT+CEREG?
++CEREG: 2,2,,,,
+OK
+AT+COPS=?
++COPS: (1,"T-Mobile","TMO","310260",9),(1,"AT&T","AT&T","310410",9),,(0-4),(0,1,2)
+OK
+AT+CGATT?
++CGATT: 0
+OK

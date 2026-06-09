@@ -28,4 +28,3 @@ web/*.sqlite-shm
 .DS_Store
 
 # Logs
-*.log

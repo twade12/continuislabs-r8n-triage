@@ -1,0 +1,47 @@
+# Scenario: HEALTHY BASELINE (Telit dialect) — Telit ME910C1-WW on AT&T LTE-M, US.
+# Same fault class as fixture 01 but on a vendor the analyzer's vendor-detector
+# doesn't currently know about (Telit). Tests whether vendor-unknown logs still
+# diagnose correctly when the standard 3GPP commands all look healthy.
+# Expected SE diagnosis: healthy session.
+# Telit-specific commands present: #SGACT, #SD (socket dial).
+
+AT
+OK
+ATI
+Telit
+ME910C1-WW
+21.01.502
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CGDCONT=1,"IP","hologram"
+OK
+AT+CSQ
++CSQ: 19,99
+OK
+AT+CESQ
++CESQ: 99,99,255,255,28,55
+OK
+AT+COPS?
++COPS: 0,0,"AT&T",8
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CGACT=1,1
+OK
+AT+CGPADDR=1
++CGPADDR: 1,"100.66.42.18"
+OK
+AT#SGACT=1,1
+#SGACT: "100.66.42.18"
+OK
+AT#SD=1,0,443,"hologram.io",0,0
+OK
+CONNECT

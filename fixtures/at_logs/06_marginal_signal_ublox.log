@@ -1,0 +1,46 @@
+# Scenario: MARGINAL SIGNAL — u-blox SARA-R412M, customer reports "device connects
+# sometimes, drops other times. Logs say everything is fine when it works."
+# Key signals:
+#   +CSQ: 5,99               (RSSI ~ -103 dBm — bottom of usable range)
+#   +UCGED reports RSRP -118 dBm, RSRQ -17.5 dB — both at LTE-M sensitivity edge
+#   +CEREG: 0,1              (currently registered, but unstable)
+#   +UPING shows mixed: some replies at ~2000 ms RTT, two timeouts in 4 packets
+# Diagnosis: classic "edge of coverage" intermittent connectivity. Device is not
+# broken — it's at the RF cliff where small environmental changes (door closed,
+# truck parked nearby, weather) push it over the edge.
+# Customer guidance:
+#   - Improve antenna: ensure it is OUTSIDE any metal enclosure (Faraday cage).
+#   - Reposition: even 30 cm of vertical change can swing RSRP by 6+ dB.
+#   - Consider higher-gain external antenna with proper SMA/u.FL connection.
+#   - For permanent low-coverage sites, evaluate switching to NB-IoT (better link
+#     budget at the cost of throughput) — Hologram supports both Cat-M1 and NB1.
+# Triage tip: if RSRP > -110 and RSRQ > -15 the link should be solid. The "between
+# -110 and -120" zone is where most "intermittent" tickets actually live.
+
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CSQ
++CSQ: 5,99
+OK
+AT+UCGED=5
++RSRP: 1,2850,"-118.00"
++RSRQ: 1,2850,"-17.50"
++CESQ: 99,99,255,255,30,7
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CGACT=1,1
+OK
+AT+UPING="8.8.8.8"
+OK
++UUPING: 1,32,"8.8.8.8","8.8.8.8",242,1980
++UUPINGER: 2,"Timeout"
++UUPINGER: 3,"Timeout"
++UUPING: 4,32,"8.8.8.8","8.8.8.8",242,2210

@@ -1,0 +1,44 @@
+# Scenario: ROAMING DENIED — u-blox SARA-R5, US-purchased Hologram SIM operating
+# in China. Customer's plan/profile lacks coverage on Chinese carriers.
+# Key signals:
+#   +COPS=? returns Chinese networks (MCC 460) but with status 3 ("forbidden")
+#   +COPS? shows the modem has selected CHN-UNICOM but as a forbidden PLMN
+#   +CEREG: 0,3              (registration denied)
+#   +CEER reports EMM cause 8 ("EPS services and non-EPS services not allowed")
+#   +CGATT=1 -> +CME ERROR: 30
+# Diagnosis: this isn't a SIM activation issue (cause 8 here is from a DIFFERENT
+# context than fixture 02 — there it meant HSS hadn't propagated; here it means
+# the visited network's roaming agreement with our home PLMN doesn't cover this
+# subscription type or country). The classic differentiator: a fresh-activation
+# cause-8 will resolve with time; a roaming-denial cause-8 will not — it requires
+# a profile change.
+# Customer guidance:
+#   - Confirm coverage country at https://www.hologram.io/global-coverage
+#   - For Hyper SIM (eUICC): activate a profile that includes China coverage.
+#     With Conductor: define a geographic policy that auto-switches profiles
+#     when the device crosses a country boundary.
+#   - For non-eUICC SIMs: this device is going to need a different SKU for this
+#     deployment — escalate to AM/CSM to scope a regional plan.
+
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CSQ
++CSQ: 19,99
+OK
+AT+COPS=?
++COPS: (3,"CHN-UNICOM","CU","46001",7),(3,"CMCC","CMCC","46000",7),,(0-4),(0,1,2)
+OK
+AT+COPS?
++COPS: 0,0,"CHN-UNICOM",7
+OK
+AT+CEREG?
++CEREG: 0,3
+OK
+AT+CEER
++CEER: "EMM","8","EPS services and non-EPS services not allowed"
+OK
+AT+CGATT=1
++CME ERROR: 30

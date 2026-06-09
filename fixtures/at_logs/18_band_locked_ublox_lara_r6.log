@@ -1,0 +1,41 @@
+# Scenario: BAND MASK MISCONFIG (u-blox dialect) — u-blox LARA-R6001D with
+# band mask restricted via +UBANDMASK to bands the local AT&T tower doesn't
+# broadcast on. Same fault class as fixture 08 but on u-blox using +UBANDMASK
+# rather than Quectel's +QCFG="band". Tests whether band_locked rule generalizes
+# (it relies on the universal signals: +CSQ 99,99 and empty +COPS=? scan,
+# not on vendor-specific band-config commands).
+# Expected SE diagnosis: band/RAT mask too restrictive for the local tower.
+# Customer guidance:
+#   For u-blox LARA-R6 covering US LTE: AT+UBANDMASK=0,524420
+#   AT+CFUN=15  (full radio restart on u-blox)
+#   Verify with AT+COPS=? after restart.
+
+AT
+OK
+ATI
+u-blox
+LARA-R6001D
+"00.21,A.00.05"
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+UBANDMASK?
++UBANDMASK: 0,2
++UBANDMASK: 1,0
+OK
+AT+CFUN=1
+OK
+AT+CSQ
++CSQ: 99,99
+OK
+AT+COPS=?
++COPS: ,,,(0-4),(0,1,2)
+OK
+AT+CEREG?
++CEREG: 0,2
+OK
+AT+UCGED=5
++RSRP: 0,0,"-"
++RSRQ: 0,0,"-"
+OK

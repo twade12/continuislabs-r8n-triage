@@ -1,0 +1,55 @@
+# Scenario: PSM TOO AGGRESSIVE — Quectel BG95 with Power Saving Mode enabled.
+# Customer reports: "device attaches, sometimes sends one packet, then we lose it
+# for 30+ minutes at a time. Then it comes back briefly and the cycle repeats."
+# Key signals:
+#   +CPSMS: 1,,,"00000010","00000001"   (PSM enabled, T3412=60s, T3324=10s)
+#     - T3324 (active timer) = 10 seconds — modem goes to deep sleep 10s after
+#       its last activity
+#     - T3412 (periodic TAU) = 60 seconds — modem briefly wakes for tracking-area
+#       update on this interval
+#   +CEDRXS: 1,4,"0010"                 (eDRX enabled, ~20.48s paging window)
+#   +CEREG: 0,1, +CGATT: 1, +CGACT OK   (all looks correct when awake)
+#   +CSCON: 0,0                         (RRC IDLE — not in connected state)
+# Diagnosis: PSM is doing exactly what it's configured to do. Device is asleep
+# 90%+ of the time. From the platform perspective the device looks "gone" because
+# downlink packets buffer at the network and only deliver during the brief
+# eDRX paging windows.
+# Customer guidance:
+#   - For DEBUG: temporarily disable PSM/eDRX:
+#       AT+CPSMS=0
+#       AT+CEDRXS=0
+#     Re-test data path. If problem disappears, you've confirmed PSM is the cause.
+#   - For PRODUCTION: tune T3324 (active timer) longer than the device's
+#     application duty cycle. If your firmware sends data every 5 minutes, T3324
+#     of 10 seconds is wrong. If you need downlink within X seconds of an event,
+#     PSM is incompatible — use eDRX alone or stay always-on.
+# Triage flag: ALWAYS check +CPSMS? and +CEDRXS? before debugging "device
+# disappears periodically" complaints. PSM-induced "outages" account for a
+# surprising fraction of L2 escalations.
+
+AT+CPIN?
++CPIN: READY
+OK
+AT+CPSMS?
++CPSMS: 1,,,"00000010","00000001"
+OK
+AT+CEDRXS?
++CEDRXS: 1,4,"0010"
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CSCON?
++CSCON: 0,0
+OK
+AT+CGACT=1,1
+OK
+AT+CGPADDR=1
++CGPADDR: 1,"100.66.4.18"
+OK
+AT+CSCON?
++CSCON: 0,0
+OK

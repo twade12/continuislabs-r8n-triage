@@ -1,0 +1,60 @@
+# Scenario: DNS RESOLUTION FAILURE — Quectel EC25-G. Modem is fully attached,
+# IP-layer is healthy (pings to 8.8.8.8 succeed cleanly), but pings to
+# hostnames fail with QPING error 565 ("DNS lookup failed"). This is a
+# brand-new fault class my analyzer doesn't have a rule for — it should
+# show up as a gap because the heuristic "data path is healthy" returns
+# True even though name resolution is broken.
+# Expected SE diagnosis: DNS misconfiguration. The device is using
+# carrier-assigned DNS but those servers may be blocked, or the device
+# firmware has hardcoded/stale DNS settings.
+# Customer guidance:
+#   1. Confirm IP-layer works:  AT+QPING=1,"8.8.8.8"   (already in the log)
+#   2. Check DNS:  AT+QIDNSCFG=1     (Quectel-specific DNS config readout)
+#   3. Override with public DNS: AT+QIDNSCFG=1,"8.8.8.8","1.1.1.1"
+#   4. Have the application code retry DNS on failure rather than caching the result.
+
+AT
+OK
+ATI
+Quectel
+EC25-G
+Revision: EC25GGBR07A11M1G
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CGDCONT=1,"IP","hologram"
+OK
+AT+COPS?
++COPS: 0,0,"AT&T",8
+OK
+AT+CSQ
++CSQ: 23,99
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CGACT=1,1
+OK
+AT+CGPADDR=1
++CGPADDR: 1,"100.66.7.42"
+OK
+AT+QPING=1,"8.8.8.8",1,4
+OK
++QPING: 0,"8.8.8.8",32,42,255
++QPING: 0,"8.8.8.8",32,38,255
++QPING: 0,"8.8.8.8",32,41,255
++QPING: 0,"8.8.8.8",32,40,255
++QPING: 0,4,4,0,38,42,40
+AT+QPING=1,"hologram.io",1,4
+OK
++QPING: 565,"hologram.io",32,0,0
++QPING: 565,"hologram.io",32,0,0
++QPING: 565,"hologram.io",32,0,0
++QPING: 565,"hologram.io",32,0,0
++QPING: 565,4,0,4

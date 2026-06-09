@@ -1,0 +1,44 @@
+# Scenario: SIM NOT DETECTED — SIMCom SIM7600G-H, customer reports
+# "device shipped from factory and won't connect."
+# Key signals:
+#   +CPIN: NOT INSERTED      (modem cannot read the UICC)
+#   +CCID -> +CME ERROR: 10  (SIM not inserted)
+#   +CIMI -> +CME ERROR: 10
+#   +CSQ: 99,99              (no measurement — radio not initialized)
+# Diagnosis: this is a hardware-side problem before any network interaction.
+# Common causes ranked by frequency in field returns:
+#   1. SIM tray inserted with wrong orientation (chip up vs chip down).
+#   2. SIM contacts dirty or corroded — wipe with isopropyl, reseat.
+#   3. Ribbon cable / SIM holder solder joint damaged in shipping.
+#   4. Modem firmware in download mode (rare, would also fail to boot AT cleanly).
+# Customer guidance:
+#   - Power down completely.
+#   - Reseat the SIM, verify orientation against the silkscreen.
+#   - Try a known-good SIM in the same slot — if it also fails, hardware fault.
+#   - Try the suspect SIM in a known-good device — if it works, slot fault.
+# Triage tip: ALWAYS distinguish "SIM not inserted" from "SIM PIN locked" — different
+# fix paths.
+
+AT
+OK
+ATI
+SIMCOM_Ltd
+SIMCOM_SIM7600G-H
+Revision:LE20B04SIM7600G-H
+OK
+AT+CPIN?
++CPIN: NOT INSERTED
+AT+CCID
++CME ERROR: 10
+AT+CIMI
++CME ERROR: 10
+AT+CFUN=1
+OK
+AT+CPIN?
++CPIN: NOT INSERTED
+AT+CSQ
++CSQ: 99,99
+OK
+AT+COPS?
++COPS: 0
+OK

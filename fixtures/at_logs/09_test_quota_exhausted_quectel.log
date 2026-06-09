@@ -1,0 +1,51 @@
+# Scenario: TEST-ACTIVATE QUOTA EXHAUSTED — Quectel BG96. SIM is in TEST-ACTIVATE
+# state per Hologram dashboard. The customer transferred ~150 KB during testing
+# without manually promoting the SIM to LIVE.
+# Background:
+#   Per https://docs.hologram.io/dashboard/sims/sim-states-and-statuses
+#   TEST-ACTIVATE auto-converts to LIVE after 100 KB data OR 10 SMS messages.
+#   But if the auto-convert event is delayed or fails, the SIM enters a state
+#   where it CAN attach (test allowance is provisioned at the carrier) but data
+#   packets are dropped/throttled at the Hologram core.
+# Key signals:
+#   +CEREG: 0,1, +CGATT: 1, +CGACT=1,1 OK, valid +CGPADDR  -- everything looks fine
+#   +QPING: ALL packets time out (error code 569 = destination unreachable from
+#   modem's perspective) — packets enter the network and never come back.
+# Diagnosis: this is the SECOND silent killer. Modem says everything is healthy.
+# Application log says "no data." The clue is "packet count = 0 returned."
+# Customer guidance:
+#   - In Hologram dashboard, go to the SIM, click "Activate" to promote
+#     TEST-ACTIVATE -> LIVE, and assign a paid plan.
+#   - Confirm SIM state via API: GET /api/1/links/cellular/{linkid}
+#     Look for state == "LIVE" (not "TEST-ACTIVATE").
+#   - After state change, allow up to 10 minutes for activation to settle, then
+#     re-test the data path.
+# Triage flag: if the modem looks healthy but data fails, ALWAYS check the SIM
+# state via the dashboard/API before touching the modem.
+
+AT+CPIN?
++CPIN: READY
+OK
+AT+CGDCONT=1,"IP","hologram"
+OK
+AT+COPS?
++COPS: 0,0,"AT&T",8
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CGACT=1,1
+OK
+AT+CGPADDR=1
++CGPADDR: 1,"100.64.7.99"
+OK
+AT+QPING=1,"8.8.8.8",1,4
+OK
++QPING: 569,"8.8.8.8",32,0,0
++QPING: 569,"8.8.8.8",32,0,0
++QPING: 569,"8.8.8.8",32,0,0
++QPING: 569,"8.8.8.8",32,0,0
++QPING: 569,4,0,0

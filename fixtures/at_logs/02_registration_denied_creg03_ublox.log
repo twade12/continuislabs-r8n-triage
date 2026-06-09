@@ -1,0 +1,49 @@
+# Scenario: REGISTRATION DENIED — u-blox SARA-R5 in Germany, freshly activated SIM.
+# Mirrors the take-home assignment scenario, but on a different module/RAT/region
+# so the parser must generalize across vendors.
+# Key signals:
+#   +CSQ: 16,99      (RF is fine — not a coverage problem)
+#   +CEREG: 0,3      (registration *denied* by the network)
+#   +CGREG: 0,0      (no data registration even attempted)
+#   +CGATT=1 -> +CME ERROR: 30  ("no network service")
+#   +CEER reports EMM cause 8 ("EPS services and non-EPS services not allowed")
+# Most likely root cause: SIM activation has not yet propagated to the carrier's HSS.
+# Customer guidance: wait 30-60 min after activation, power-cycle the modem,
+# recheck +CEREG. If still 0,3 after an hour, escalate to L2 with ICCID + IMEI
+# and the timestamp the activation request was confirmed in the Hologram dashboard.
+
+AT
+OK
+ATI
+u-blox
+SARA-R510M8S
+"02.06,A.02.18"
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CSQ
++CSQ: 16,99
+OK
+AT+UCGED=5
++RSRP: 1,6300,"-89.00"
++RSRQ: 1,6300,"-11.00"
+OK
+AT+COPS?
++COPS: 0,0,"Vodafone DE",7
+OK
+AT+CEREG?
++CEREG: 0,3
+OK
+AT+CGREG?
++CGREG: 0,0
+OK
+AT+CGDCONT=1,"IP","hologram"
+OK
+AT+CGATT=1
++CME ERROR: 30
+AT+CEER
++CEER: "EMM","8","EPS services and non-EPS services not allowed"
+OK

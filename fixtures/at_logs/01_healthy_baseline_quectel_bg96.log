@@ -1,0 +1,52 @@
+# Scenario: HEALTHY BASELINE — Quectel BG96 on AT&T LTE-M (Cat-M1), US deployment.
+# Expected outcome: control case. Use as the reference for "what success looks like."
+# Key healthy signals:
+#   +CPIN: READY
+#   +CEREG: 0,1   (registered, home network)
+#   +CGATT: 1     (data attached)
+#   +CGACT=1,1 OK (PDP context active)
+#   valid +CGPADDR (carrier-issued IP in 100.64.0.0/10 CGNAT range)
+#   +QPING success on 4/4 packets
+# Diagnosis: nothing wrong; this is the comparison set for every other fixture here.
+
+AT
+OK
+ATI
+Quectel
+BG96
+Revision: BG96MAR04A02M1G
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CGDCONT=1,"IP","hologram"
+OK
+AT+COPS?
++COPS: 0,0,"AT&T",8
+OK
+AT+CSQ
++CSQ: 21,99
+OK
+AT+QCSQ
++QCSQ: "CAT-M1",-79,-92,142,-9
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CGACT=1,1
+OK
+AT+CGPADDR=1
++CGPADDR: 1,"100.66.18.214"
+OK
+AT+QPING=1,"8.8.8.8",1,4
+OK
++QPING: 0,"8.8.8.8",32,48,255
++QPING: 0,"8.8.8.8",32,51,255
++QPING: 0,"8.8.8.8",32,49,255
++QPING: 0,"8.8.8.8",32,47,255
++QPING: 0,4,4,0,47,51,49

@@ -1,0 +1,41 @@
+# Scenario: ROAMING DENIED (Telit dialect) — Telit LE910C1-EUX, US-purchased
+# Hologram SIM operating in the UK. Operator scan returns ALL UK PLMNs as
+# forbidden (status 3). Same fault class as fixture 07 but on Telit and in a
+# different country. Tests whether roaming_denied rule generalizes (it should
+# — relies on +COPS=? scan parsing which is standard 3GPP, not vendor-specific).
+# Expected SE diagnosis: active SIM profile lacks roaming agreement in UK.
+# Customer guidance:
+#   - Confirm UK is in the customer's purchased coverage at hologram.io.
+#   - For Hyper SIM: switch to a profile that includes UK.
+#   - Long-term: Conductor geographic-failover policy.
+#   - For non-eUICC SIMs: needs different SKU.
+
+AT
+OK
+ATI
+Telit
+LE910C1-EUX
+21.01.504
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CSQ
++CSQ: 21,99
+OK
+AT+COPS=?
++COPS: (3,"O2 - UK","O2","23410",7),(3,"EE","EE","23430",7),(3,"vodafone UK","voda UK","23415",7),,(0-4),(0,1,2)
+OK
+AT+COPS?
++COPS: 0,0,"O2 - UK",7
+OK
+AT+CEREG?
++CEREG: 0,3
+OK
+AT+CGATT=1
++CME ERROR: 30
+AT+CEER
++CEER: "EMM","8","EPS services and non-EPS services not allowed"
+OK

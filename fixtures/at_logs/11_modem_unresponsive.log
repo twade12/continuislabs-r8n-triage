@@ -1,0 +1,53 @@
+# Scenario: MODEM UNRESPONSIVE — generic. Customer reports "we send AT commands
+# and nothing comes back. Sometimes it works after a power-cycle, sometimes not."
+# Key signals:
+#   No response to "AT" repeated — empty replies.
+#   First successful response only after several attempts (autobaud may be
+#   adapting on a new cold-boot session).
+#   No URCs of any kind (would expect +CGEV, +CREG, etc. on a healthy modem).
+# Diagnosis: this is a PRE-NETWORK problem. The radio stack hasn't even gotten
+# the chance to fail. Likely causes ranked by frequency:
+#   1. INSUFFICIENT POWER — Cat-1 and LTE TX peaks can hit 2 A momentarily.
+#      A 500 mA USB supply will brown out under TX load. Symptoms include:
+#      modem boots OK, responds to AT for a while, then goes dark when it tries
+#      to attach (because attach involves TX bursts).
+#   2. UART WIRING — RX/TX swapped, UART level mismatch (3.3 V vs 1.8 V), or
+#      missing ground reference. Some modules use 1.8 V UART and require a
+#      level shifter to talk to a 3.3 V/5 V MCU.
+#   3. BAUD RATE — modem is stuck at non-default baud. Try autobaud by sending
+#      "AT\r" several times at common rates (115200, 9600, 460800).
+#   4. RTS/CTS FLOW CONTROL — host has flow control enabled but modem disabled
+#      (or vice versa); buffers fill, no data flows.
+#   5. RESET / ENABLE PIN — modem is held in reset, or the PWRKEY pulse was
+#      too short on power-up.
+#   6. FIRMWARE DOWNLOAD MODE — modem booted into FOTA/DFU mode and won't
+#      respond to normal AT until reflashed.
+# Customer guidance:
+#   - Measure VBAT under load with a scope. Look for >300 mV droops.
+#   - Verify wiring: RX-TX-GND, RTS/CTS if used, level shift if module is 1.8 V.
+#   - Try autobaud from a clean cold boot.
+#   - Check ENABLE/PWRKEY pin sequence per module datasheet.
+#   - If only ATI ever responds and nothing else, suspect bricked firmware.
+# Triage tip: ALWAYS rule out hardware before chasing network-layer symptoms.
+# Five minutes of multimeter work saves five hours of log analysis.
+
+AT
+
+
+AT
+
+
+AT
+
+
+AT
+
+
+AT
+OK
+ATI
+
+AT+CFUN?
+
+AT+CPIN?
+

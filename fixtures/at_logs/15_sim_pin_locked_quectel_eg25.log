@@ -1,0 +1,39 @@
+# Scenario: SIM PIN LOCKED — Quectel EG25-G. Customer's SIM has a PIN configured
+# (probably from a previous deployment with another carrier) and the device
+# firmware doesn't auto-enter it. The modem cannot proceed past SIM unlock.
+# Expected SE diagnosis: SIM is PIN-locked; modem reports +CPIN: SIM PIN.
+# Without entering the PIN (AT+CPIN="<pin>") nothing else can happen — the
+# radio stack stays gated.
+# Customer guidance:
+#   1. Verify the PIN with the previous carrier or documentation.
+#   2. Enter it: AT+CPIN="1234"  (the PIN they have on file)
+#   3. To remove the PIN requirement permanently: AT+CLCK="SC",0,"<pin>"
+#   4. If they don't know the PIN and have entered the wrong one 3 times,
+#      they need the PUK code from the original SIM provider.
+# Note: this is a different state from "SIM not inserted" (fixture 04) — the
+# SIM IS detected, it's just locked.
+
+AT
+OK
+ATI
+Quectel
+EG25-G
+Revision: EG25GGBR07A11M1G
+OK
+AT+CPIN?
++CPIN: SIM PIN
+AT+CSQ
++CSQ: 99,99
+OK
+AT+CFUN=1
+OK
+AT+CPIN?
++CPIN: SIM PIN
+AT+CGATT?
++CGATT: 0
+OK
+AT+CEREG?
++CEREG: 0,4
+OK
+AT+CIMI
++CME ERROR: 11

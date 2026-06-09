@@ -1,0 +1,45 @@
+# Scenario: WRONG APN — Quectel BG96. Customer set APN to "internet" (carrier default
+# they remembered from another SIM) instead of "hologram".
+# Key signals:
+#   +CGDCONT?: APN is "internet" — should be "hologram"
+#   +CEREG: 0,1   (registered fine)
+#   +CGATT: 1     (data attached fine)
+#   +CGACT=1,1 -> ERROR  <-- this is where it breaks
+#   +CEER reports cause 33 ("requested service option not subscribed")
+# Diagnosis: this is a textbook "everything looks fine until PDP context activation"
+# pattern. The carrier is willing to attach the SIM but refuses to bring up a PDP
+# context for an APN this SIM is not provisioned to use.
+# Customer guidance:
+#   AT+CGDCONT=1,"IP","hologram"     # exact string, lowercase, no quotes inside
+#   AT+CFUN=0
+#   AT+CFUN=1                        # bounce the radio so the new APN takes effect
+# If the device firmware re-writes APN on boot, the fix needs to happen in the OEM
+# config store, not just the AT shell.
+# Reference: cause 33 in 3GPP TS 24.008 Annex G almost always means "wrong APN" or
+# "APN not allowed for this subscription."
+
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CGDCONT?
++CGDCONT: 1,"IP","internet","",0,0,0,0
+OK
+AT+COPS?
++COPS: 0,0,"AT&T",8
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CGACT=1,1
+ERROR
+AT+CEER
++CEER: "No PDP context activated","SM","Cause: 33 - requested service option not subscribed"
+OK
+AT+QCSQ
++QCSQ: "CAT-M1",-82,-95,138,-10
+OK

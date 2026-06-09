@@ -1,0 +1,61 @@
+# Scenario: eUICC PROFILE FALLBACK NOT TRIGGERED — Quectel BG770A with Hologram
+# Hyper SIM (eUICC). Active profile (carrier A) lost network. Fallback profile
+# (carrier B) is provisioned on the eUICC but the device hasn't switched.
+# Conductor-relevant: the whole reason Conductor exists is to handle this
+# scenario automatically via policy. This fixture represents what the failure
+# looks like on a SIM that ISN'T enrolled in a Conductor failover policy
+# (or the policy didn't fire).
+# Key signals:
+#   +QESIM: "list",1,"...341234012",1   profile 1 active (state=1)
+#   +QESIM: "list",2,"...341234020",0   profile 2 inactive (state=0)
+#   +QESIM: "active",1                  active profile = profile 1
+#   +COPS=? returns no networks         active profile sees no usable network
+#   +CEREG: 0,2                         searching, will not register
+#   +CSQ: 99,99                         no signal on currently selected RAT/PLMN
+# Diagnosis: the active profile's home/roaming agreements don't reach this
+# location, but a usable profile sits idle on the eUICC. Without orchestration,
+# the SIM stays stuck on the wrong profile indefinitely.
+# Customer guidance:
+#   IMMEDIATE FIX (single SIM):
+#     - From Hologram dashboard SIM detail page, manually switch the active
+#       profile to profile 2.
+#     - OR via Conductor API (alpha):
+#         POST /conductor/v1/sims/{iccid}/profile/switch
+#         { "target_profile_index": 2 }
+#     - Wait ~30-60 seconds for the eUICC to apply the switch and reboot the
+#       SIM session. Modem will re-attach on the new profile.
+#   FLEET-LEVEL FIX (the right answer):
+#     - Define a Conductor failover policy:
+#         "If a SIM cannot register on its active profile for >5 minutes,
+#          switch to next available profile in priority order."
+#     - This single policy resolves this fault class for all current and future
+#       SIMs in the fleet without per-incident intervention.
+# Triage flag: for any eUICC SIM, check active vs available profiles BEFORE
+# debugging the modem or carrier side. A policy-driven fleet should self-heal;
+# if it doesn't, the policy is the bug, not the device.
+
+AT+CPIN?
++CPIN: READY
+OK
+AT+CGSN
+350201234567890
+OK
+AT+QESIM="list"
++QESIM: "list",1,"89001012012341234012",1
++QESIM: "list",2,"89001012012341234020",0
+OK
+AT+QESIM="active"
++QESIM: "active",1
+OK
+AT+COPS=?
++COPS: ,,,(0-4),(0,1,2)
+OK
+AT+CEREG?
++CEREG: 0,2
+OK
+AT+CSQ
++CSQ: 99,99
+OK
+AT+QENG="servingcell"
++QENG: "servingcell","SEARCH"
+OK

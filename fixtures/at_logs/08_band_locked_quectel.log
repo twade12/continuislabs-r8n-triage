@@ -1,0 +1,44 @@
+# Scenario: BAND/RAT MISMATCH — Quectel BG95-M3 with band mask restricting LTE-M
+# to band 12 only. OEM shipped firmware tuned for one carrier; customer deployed
+# in an area where the local tower broadcasts on bands 2/4/5 instead.
+# Key signals:
+#   +QCFG: "band",0xf,0x800,0x0   (LTE Cat-M mask = 0x800 = band 12 only)
+#   +CSQ: 99,99                   (no measurement — radio finds nothing it can use)
+#   +COPS=? returns no networks   (because no band the modem will scan is broadcasting)
+#   +CEREG: 0,2                   (searching, but futile)
+#   +QENG: "servingcell","SEARCH" (no serving cell)
+# Diagnosis: this is the silent killer. Device "looks for network and finds nothing"
+# but the network is right there — the modem just isn't allowed to talk to it.
+# Customer guidance:
+#   For US Cat-M1, enable bands 2, 4, 5, 12 at minimum:
+#     AT+QCFG="band",f,400a0e189f,0
+#     AT+CFUN=1,1                # restart radio
+#   For Verizon: bands 4 and 13.
+#   For EU: bands 3, 8, 20.
+# Triage tip: if +COPS=? returns nothing AND +CSQ is 99,99, suspect band config
+# before suspecting coverage. A real coverage problem will usually still let the
+# modem hear *something*.
+
+AT+CPIN?
++CPIN: READY
+OK
+AT+QCFG="band"
++QCFG: "band",0xf,0x800,0x0
+OK
+AT+QCFG="iotopmode"
++QCFG: "iotopmode",0
+OK
+AT+CFUN=1
+OK
+AT+COPS=?
++COPS: ,,,(0-4),(0,1,2)
+OK
+AT+CEREG?
++CEREG: 0,2
+OK
+AT+CSQ
++CSQ: 99,99
+OK
+AT+QENG="servingcell"
++QENG: "servingcell","SEARCH"
+OK

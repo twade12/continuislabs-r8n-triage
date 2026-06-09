@@ -1,0 +1,45 @@
+# Scenario: MARGINAL SIGNAL (Nordic dialect) — Nordic nRF9160 in a
+# warehouse-rack deployment with poor RF.
+# Same fault class as fixture 06 but Nordic uses +CESQ for signal reporting
+# rather than +RSRP / +QCSQ / +UCGED. Tests whether the marginal_signal rule
+# generalizes — likely a GAP since the rule's RSRP detection only handles
+# the +RSRP and +QCSQ formats, not +CESQ.
+# Expected SE diagnosis: marginal RF — RSRP at edge of LTE-M sensitivity.
+# +CESQ values: rxlev=99 (n/a), ber=99 (n/a), rscp=255 (n/a), ecno=255 (n/a),
+# rsrq=15 (-13.0 dB), rsrp=23 (corresponds to -118 dBm — at the cliff).
+# Customer guidance: improve antenna placement, use higher-gain external
+# antenna, consider switching to NB-IoT for better link budget.
+
+AT
+OK
+AT+CGMI
+Nordic Semiconductor ASA
+OK
+AT+CGMM
+nRF9160-SICA
+OK
+AT+CGMR
+mfw_nrf9160_1.3.4
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CFUN=1
+OK
+AT+CESQ
++CESQ: 99,99,255,255,15,23
+OK
+AT%XSNRSQ?
+%XSNRSQ: -3,3,1
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CGACT=1,1
+OK
+AT+CGPADDR=1
++CGPADDR: 1,"100.66.4.13"
+OK

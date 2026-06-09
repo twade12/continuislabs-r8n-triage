@@ -1,0 +1,30 @@
+# Scenario: MODEM UNRESPONSIVE (Telit module) — same fault class as fixture 11
+# but on a Telit ME910 instead of a generic capture. Tests that the
+# modem_unresponsive rule fires regardless of what module the customer
+# is using — it should, since the rule keys on bare-AT-with-no-response
+# pattern which is universal.
+# Expected SE diagnosis: pre-network problem (power, UART wiring, baud rate,
+# or the modem is in firmware-download mode).
+# Customer guidance: see fixture 11 — ALWAYS rule out hardware before chasing
+# network-layer symptoms.
+
+AT
+
+
+AT
+
+
+AT
+
+
+AT
+
+
+AT
+OK
+ATI
+
+AT+CPIN?
+
+AT+CFUN?
+

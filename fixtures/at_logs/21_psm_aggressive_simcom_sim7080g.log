@@ -1,0 +1,41 @@
+# Scenario: PSM TOO AGGRESSIVE (SIMCom dialect) — SIMCom SIM7080G with PSM
+# enabled. Same fault class as fixture 10 but on SIMCom rather than Quectel.
+# Tests whether psm_aggressive rule generalizes (it should — relies on the
+# standard +CPSMS command which all 3GPP-compliant LTE-M/NB-IoT modules support).
+# Expected SE diagnosis: PSM is doing exactly what it's configured to do —
+# device looks "missing" between paging windows.
+# Customer guidance:
+#   For DEBUG: AT+CPSMS=0 ; AT+CEDRXS=0
+#   For PRODUCTION: tune T3324 (active timer) longer than the application's
+#   duty cycle, or use eDRX alone if downlink latency requirements demand it.
+
+AT
+OK
+ATI
+SIMCOM_Ltd
+SIMCOM_SIM7080G
+Revision:1529B07SIM7080
+OK
+AT+CPIN?
++CPIN: READY
+OK
+AT+CPSMS?
++CPSMS: 1,,,"00000010","00000001"
+OK
+AT+CEDRXS?
++CEDRXS: 1,5,"0010"
+OK
+AT+CEREG?
++CEREG: 0,1
+OK
+AT+CGATT?
++CGATT: 1
+OK
+AT+CSCON?
++CSCON: 0,0
+OK
+AT+CGACT=1,1
+OK
+AT+CGPADDR=1
++CGPADDR: 1,"100.66.55.12"
+OK
