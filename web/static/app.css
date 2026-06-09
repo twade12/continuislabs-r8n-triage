@@ -10,13 +10,7 @@ pre.atlog {
   word-break: break-all;
 }
 
-/* Sidebar nav active state */
-.nav-link--active {
-  color: #f1f0fe !important;
-  background: rgba(91, 82, 232, 0.14);
-  border-left: 2px solid #5b52e8;
-  padding-left: 14px !important;
-}
+/* nav-link base styles are in base.html <style> to avoid CDN load-order issues */
 
 /* Confidence indicators */
 .confidence-high   { color: #b91c1c; font-weight: 600; }

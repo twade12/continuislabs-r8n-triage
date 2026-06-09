@@ -28,202 +28,302 @@
       }
     }
   </script>
+
+  <style>
+    /* Sidebar base */
+    #sidebar {
+      width: 15rem;
+      overflow: hidden;
+      transition: width .22s cubic-bezier(.4,0,.2,1);
+      background: linear-gradient(180deg,#111118 0%,#0e0e14 100%);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Nav links */
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      font-size: 13px;
+      color: #7a8494;
+      text-decoration: none;
+      border-radius: 6px;
+      margin: 1px 8px;
+      position: relative;
+      transition: color .15s ease, background-color .15s ease;
+      white-space: nowrap;
+    }
+    .nav-link:hover { color: #e2e8f0; background: rgba(255,255,255,0.05); }
+    .nav-link svg   { flex-shrink: 0; }
+
+    /* Active state — only color/weight; highlight div handles background */
+    .nav-link--active { color: #c4bfff !important; }
+
+    /* Sliding highlight bar behind active link */
+    #nav-highlight {
+      position: absolute;
+      left: 8px; right: 8px;
+      background: rgba(91,82,232,0.18);
+      border-left: 2.5px solid #5b52e8;
+      border-radius: 6px;
+      pointer-events: none;
+      transition: top .22s cubic-bezier(.4,0,.2,1), height .22s cubic-bezier(.4,0,.2,1), opacity .15s ease;
+      opacity: 0;
+    }
+
+    /* Section labels */
+    .sb-section {
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: #3d4451;
+      white-space: nowrap;
+      padding: 14px 14px 4px;
+      transition: opacity .15s, height .15s;
+    }
+
+    /* Toggle button at bottom of nav */
+    #sb-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      font-size: 12px;
+      color: #3d4451;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      width: 100%;
+      border-radius: 6px;
+      margin: 0 8px;
+      transition: color .15s, background .15s;
+      white-space: nowrap;
+    }
+    #sb-toggle:hover { color: #64748b; background: rgba(255,255,255,0.04); }
+
+    /* ---- Collapsed state ---- */
+    #sidebar.collapsed { width: 4rem; }
+
+    #sidebar.collapsed .nav-link {
+      justify-content: center;
+      padding-left: 0; padding-right: 0;
+      margin-left: 6px; margin-right: 6px;
+    }
+    #sidebar.collapsed #sb-toggle {
+      justify-content: center;
+      padding-left: 0; padding-right: 0;
+      margin-left: 6px; margin-right: 6px;
+    }
+    #sidebar.collapsed #nav-highlight {
+      left: 6px; right: 6px;
+      border-left-width: 0;
+      border-radius: 8px;
+    }
+    #sidebar.collapsed .sb-hide { display: none !important; }
+    #sidebar.collapsed .sb-logo-link { justify-content: center; }
+  </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex">
 
   <!-- ============================================================
        SIDEBAR
-       Width is set by JS on init and toggle. CSS handles labels.
        ============================================================ -->
-  <aside id="sidebar"
-         class="sidebar-expanded flex-shrink-0 flex flex-col min-h-screen"
-         style="background:linear-gradient(180deg,#111118 0%,#0e0e14 100%); transition:width .18s ease; width:15rem; overflow:hidden;">
+  <aside id="sidebar">
 
-    <!-- Logo + toggle button -->
-    <div class="flex items-center justify-between border-b border-white/5" style="padding:14px 12px; min-height:57px;">
-      <a href="/" class="flex items-center gap-2 min-w-0 overflow-hidden">
-        <div style="width:28px;height:28px;flex-shrink:0;">
-          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px;">
-            <rect width="36" height="36" rx="8" fill="#5b52e8" fill-opacity="0.18"/>
-            <circle cx="10" cy="18" r="4" fill="#5b52e8"/>
-            <circle cx="26" cy="18" r="4" fill="#5b52e8" fill-opacity="0.45"/>
-            <line x1="14" y1="18" x2="22" y2="18" stroke="#5b52e8" stroke-width="1.5"/>
-            <polyline points="20,15.5 22.5,18 20,20.5" stroke="#5b52e8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          </svg>
-        </div>
-        <span class="sb-text font-mono font-bold text-xl tracking-tight text-slate-100 leading-none whitespace-nowrap">
+    <!-- Logo — clean, no toggle button competing for space -->
+    <a href="/" id="sb-logo-link" class="sb-logo-link"
+       style="display:flex;align-items:center;gap:10px;padding:14px 14px;border-bottom:1px solid rgba(255,255,255,0.05);text-decoration:none;min-height:57px;overflow:hidden;">
+      <div style="width:28px;height:28px;flex-shrink:0;">
+        <svg viewBox="0 0 36 36" fill="none" style="width:28px;height:28px;">
+          <rect width="36" height="36" rx="8" fill="#5b52e8" fill-opacity="0.18"/>
+          <circle cx="10" cy="18" r="4" fill="#5b52e8"/>
+          <circle cx="26" cy="18" r="4" fill="#5b52e8" fill-opacity="0.45"/>
+          <line x1="14" y1="18" x2="22" y2="18" stroke="#5b52e8" stroke-width="1.5"/>
+          <polyline points="20,15.5 22.5,18 20,20.5" stroke="#5b52e8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+      <div class="sb-hide" style="min-width:0;overflow:hidden;">
+        <div style="font-family:monospace;font-weight:700;font-size:18px;letter-spacing:-.5px;color:#f1f5f9;white-space:nowrap;line-height:1.1;">
           r<span style="color:#5b52e8">8</span>n
-          <span style="font-size:11px;color:#4a5568;font-weight:400;margin-left:2px;">triage</span>
-        </span>
-      </a>
-      <button id="sb-toggle"
-              style="width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#6b7280;"
-              title="Toggle sidebar">
-        <!-- Shown when expanded (click to collapse) -->
-        <svg id="sb-icon-collapse" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/>
-        </svg>
-        <!-- Shown when collapsed (click to expand) -->
-        <svg id="sb-icon-expand" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-          <polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>
-        </svg>
-      </button>
-    </div>
+        </div>
+        <div style="font-size:10px;color:#3d4451;font-family:monospace;white-space:nowrap;margin-top:1px;">triage</div>
+      </div>
+    </a>
 
     <!-- Nav -->
-    <nav class="flex-1 py-2" style="overflow:hidden;">
+    <nav id="sb-nav" style="flex:1;padding:6px 0;overflow:hidden;position:relative;">
 
-      <!-- Free tools — always visible -->
-      <div class="sb-text" style="padding:12px 16px 4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#4a5568;white-space:nowrap;">Free tools</div>
+      <!-- Sliding highlight bar — JS positions this -->
+      <div id="nav-highlight"></div>
+
+      <!-- Free tools -->
+      <div class="sb-section sb-hide">Free tools</div>
 
       <a href="/triage" title="Triage workbench"
-         class="nav-link {% if active_page == 'triage' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+         class="nav-link{% if active_page == 'triage' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">Triage workbench</span>
+        <span class="sb-hide">Triage workbench</span>
       </a>
 
       <a href="/at" title="AT reference"
-         class="nav-link {% if active_page == 'at' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+         class="nav-link{% if active_page == 'at' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">AT reference</span>
+        <span class="sb-hide">AT reference</span>
       </a>
 
       <a href="/portal" title="Self-service portal"
-         class="nav-link {% if active_page == 'portal' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+         class="nav-link{% if active_page == 'portal' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">Self-service portal</span>
+        <span class="sb-hide">Self-service portal</span>
       </a>
 
       {% if current_user %}
 
-      <!-- Dashboard section -->
-      <div class="sb-text" style="padding:16px 16px 4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#4a5568;white-space:nowrap;">Dashboard</div>
+      <div class="sb-section sb-hide">Dashboard</div>
 
       <a href="/dash" title="Overview"
-         class="nav-link {% if active_page == 'dash' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+         class="nav-link{% if active_page == 'dash' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">Overview</span>
+        <span class="sb-hide">Overview</span>
       </a>
 
       <a href="/sims" title="SIMs"
-         class="nav-link {% if active_page == 'sims' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-          <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M15 2v5h5M9 12h6M9 16h6"/>
+         class="nav-link{% if active_page == 'sims' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2"/>
+          <path d="M15 2v5h5M9 12h6M9 16h6"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">SIMs</span>
+        <span class="sb-hide">SIMs</span>
       </a>
 
       <a href="/audit" title="Audit log"
-         class="nav-link {% if active_page == 'audit' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>
+         class="nav-link{% if active_page == 'audit' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">Audit log</span>
+        <span class="sb-hide">Audit log</span>
       </a>
 
       <a href="/fleet" title="Fleet health"
-         class="nav-link {% if active_page == 'fleet' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+         class="nav-link{% if active_page == 'fleet' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">Fleet health</span>
+        <span class="sb-hide">Fleet health</span>
       </a>
 
-      <!-- Knowledge section -->
-      <div class="sb-text" style="padding:16px 16px 4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#4a5568;white-space:nowrap;">Knowledge</div>
+      <div class="sb-section sb-hide">Knowledge</div>
 
       <a href="/codex" title="Codex KB"
-         class="nav-link {% if active_page == 'codex' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-          <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+         class="nav-link{% if active_page == 'codex' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">Codex KB</span>
+        <span class="sb-hide">Codex KB</span>
       </a>
 
-      <!-- Operations section -->
-      <div class="sb-text" style="padding:16px 16px 4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#4a5568;white-space:nowrap;">Operations</div>
+      <div class="sb-section sb-hide">Operations</div>
 
       <a href="/bulk" title="Bulk operations"
-         class="nav-link {% if active_page == 'bulk' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+         class="nav-link{% if active_page == 'bulk' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">Bulk operations</span>
+        <span class="sb-hide">Bulk operations</span>
       </a>
 
       <a href="/onboard" title="Onboarding"
-         class="nav-link {% if active_page == 'onboard' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-          <circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/>
+         class="nav-link{% if active_page == 'onboard' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">Onboarding</span>
+        <span class="sb-hide">Onboarding</span>
       </a>
 
       <a href="/conductor" title="Conductor"
-         class="nav-link {% if active_page == 'conductor' %}nav-link--active{% endif %}"
-         style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#94a3b8;text-decoration:none;transition:color .15s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-          <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+         class="nav-link{% if active_page == 'conductor' %} nav-link--active{% endif %}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+          <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+          <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
         </svg>
-        <span class="sb-text" style="white-space:nowrap;">Conductor</span>
+        <span class="sb-hide">Conductor</span>
       </a>
 
       {% else %}
+
       <!-- Sign-in nudge -->
-      <div style="margin:16px 12px 0;">
-        <div style="border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);border-radius:8px;padding:12px;">
-          <p class="sb-text" style="font-size:11px;color:#64748b;line-height:1.5;margin-bottom:10px;">Sign in to access dashboard, SIM management, audit log, and more.</p>
-          <a href="/auth/login" class="sb-text"
-             style="display:block;text-align:center;font-size:12px;font-weight:600;padding:6px;border-radius:6px;background:#5b52e8;color:#fff;text-decoration:none;">Sign in</a>
-          <!-- Icon-only in collapsed state -->
-          <a href="/auth/login" class="sb-icon-only"
+      <div style="margin:12px 8px 0;">
+        <div style="border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);border-radius:8px;padding:12px 10px;">
+          <p class="sb-hide" style="font-size:11px;color:#4b5563;line-height:1.55;margin:0 0 8px;">Sign in to access the dashboard, SIM management, audit log, and more.</p>
+          <a href="/auth/login" class="sb-hide"
+             style="display:block;text-align:center;font-size:12px;font-weight:600;padding:6px;border-radius:6px;background:#5b52e8;color:#fff;text-decoration:none;transition:background .15s;">
+            Sign in
+          </a>
+          <a href="/auth/login" id="sb-signin-icon"
              style="display:none;width:32px;height:32px;border-radius:6px;background:#5b52e8;align-items:center;justify-content:center;margin:0 auto;text-decoration:none;" title="Sign in">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-              <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
             </svg>
           </a>
         </div>
       </div>
+
       {% endif %}
+
+      <!-- Toggle collapse button — lives here, clear of the logo -->
+      <div style="margin-top:auto;padding:8px 0 0;">
+        <button id="sb-toggle" title="Toggle sidebar">
+          <!-- Collapse icon (shown when expanded) -->
+          <svg id="sb-icon-col" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/>
+          </svg>
+          <!-- Expand icon (shown when collapsed) -->
+          <svg id="sb-icon-exp" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+            <polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>
+          </svg>
+          <span class="sb-hide" style="font-size:11px;">Collapse</span>
+        </button>
+      </div>
 
     </nav>
 
-    <!-- Footer: user info or version -->
-    <div style="border-top:1px solid rgba(255,255,255,0.05);padding:12px 14px;">
+    <!-- Footer: user -->
+    <div style="border-top:1px solid rgba(255,255,255,0.05);padding:10px 12px;overflow:hidden;">
       {% if current_user %}
       <div style="display:flex;align-items:center;gap:10px;overflow:hidden;">
         {% if current_user.avatar_url %}
-        <img src="{{ current_user.avatar_url }}" style="width:28px;height:28px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);" alt="">
+        <img src="{{ current_user.avatar_url }}" style="width:26px;height:26px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);" alt="">
         {% else %}
-        <div style="width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#5b52e8;font-size:11px;font-weight:700;color:#fff;">
+        <div style="width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#5b52e8;font-size:11px;font-weight:700;color:#fff;">
           {{ (current_user.name or '?')[:1] | upper }}
         </div>
         {% endif %}
-        <div class="sb-text" style="min-width:0;flex:1;overflow:hidden;">
+        <div class="sb-hide" style="min-width:0;flex:1;overflow:hidden;">
           <div style="font-size:12px;color:#cbd5e1;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ current_user.name }}</div>
           <a href="/auth/logout" style="font-size:10px;color:#475569;text-decoration:none;font-family:monospace;">Sign out</a>
         </div>
       </div>
       {% else %}
-      <div class="sb-text" style="font-size:10px;font-family:monospace;color:#374151;white-space:nowrap;">r8n v0.1 · Continuis Labs</div>
+      <div class="sb-hide" style="font-size:10px;font-family:monospace;color:#2d3748;white-space:nowrap;">r8n v0.1 · Continuis Labs</div>
       {% endif %}
     </div>
   </aside>
@@ -231,7 +331,7 @@
   <!-- ============================================================
        MAIN CONTENT
        ============================================================ -->
-  <main class="flex-1 min-h-screen flex flex-col" style="min-width:0;">
+  <main style="flex:1;min-height:100vh;display:flex;flex-direction:column;min-width:0;">
     <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-4 sticky top-0 z-10">
       {% if current_user %}
       <form action="/search" method="get" class="flex-1 max-w-2xl">
@@ -266,60 +366,84 @@
   </main>
 
   <!-- ============================================================
-       SIDEBAR TOGGLE SCRIPT
-       Uses style.width directly — no CSS selector dependencies.
+       SIDEBAR JS
        ============================================================ -->
   <script>
-    (function () {
-      var sidebar   = document.getElementById('sidebar');
-      var iconCol   = document.getElementById('sb-icon-collapse');
-      var iconExp   = document.getElementById('sb-icon-expand');
-      var btn       = document.getElementById('sb-toggle');
+  (function () {
+    var sidebar   = document.getElementById('sidebar');
+    var nav       = document.getElementById('sb-nav');
+    var iconCol   = document.getElementById('sb-icon-col');
+    var iconExp   = document.getElementById('sb-icon-exp');
+    var btn       = document.getElementById('sb-toggle');
+    var signinIcon = document.getElementById('sb-signin-icon');
 
-      var EXPANDED  = '15rem';
-      var COLLAPSED = '4rem';
+    // ---- Sliding highlight bar ----------------------------------------
+    var hl = document.getElementById('nav-highlight');
 
-      function applyState(collapsed) {
-        sidebar.style.width = collapsed ? COLLAPSED : EXPANDED;
+    function getActiveLink() {
+      return nav.querySelector('.nav-link--active');
+    }
 
-        // Toggle icons (inline style = no Tailwind dependency)
-        iconCol.style.display = collapsed ? 'none'  : 'block';
-        iconExp.style.display = collapsed ? 'block' : 'none';
-
-        // Toggle text labels & section headers
-        var labels = sidebar.querySelectorAll('.sb-text');
-        labels.forEach(function(el) { el.style.display = collapsed ? 'none' : ''; });
-
-        // Center links when collapsed
-        var links = sidebar.querySelectorAll('.nav-link');
-        links.forEach(function(el) {
-          el.style.justifyContent = collapsed ? 'center' : '';
-          el.style.paddingLeft    = collapsed ? '0'      : '';
-          el.style.paddingRight   = collapsed ? '0'      : '';
+    function positionHighlight(link, animate) {
+      if (!link) { hl.style.opacity = '0'; return; }
+      if (!animate) {
+        hl.style.transition = 'none';
+        // Force reflow so the no-transition takes effect
+        hl.getBoundingClientRect();
+      }
+      var nRect = nav.getBoundingClientRect();
+      var lRect = link.getBoundingClientRect();
+      hl.style.top    = (lRect.top - nRect.top + nav.scrollTop) + 'px';
+      hl.style.height = lRect.height + 'px';
+      hl.style.opacity = '1';
+      if (!animate) {
+        // Re-enable transitions after snap
+        requestAnimationFrame(function () {
+          hl.style.transition = '';
         });
+      }
+    }
 
-        // Sign-in nudge icon-only button
-        var iconOnly = sidebar.querySelectorAll('.sb-icon-only');
-        iconOnly.forEach(function(el) { el.style.display = collapsed ? 'flex' : 'none'; });
+    // Snap to initial active item (no animation on load)
+    positionHighlight(getActiveLink(), false);
+
+    // On any nav link click: move highlight immediately then let page load
+    nav.querySelectorAll('.nav-link').forEach(function (link) {
+      link.addEventListener('click', function () {
+        nav.querySelectorAll('.nav-link').forEach(function (l) {
+          l.classList.remove('nav-link--active');
+        });
+        link.classList.add('nav-link--active');
+        positionHighlight(link, true);
+      });
+    });
+
+    // ---- Toggle collapse ----------------------------------------------
+    function applyCollapsed(collapsed) {
+      sidebar.classList.toggle('collapsed', collapsed);
+      iconCol.style.display = collapsed ? 'none'  : '';
+      iconExp.style.display = collapsed ? ''      : 'none';
+
+      // Show/hide sign-in icon-only button
+      if (signinIcon) {
+        signinIcon.style.display = collapsed ? 'flex' : 'none';
       }
 
-      // Restore preference
-      var pref = 'expanded';
-      try { pref = localStorage.getItem('r8n-sidebar') || 'expanded'; } catch(e) {}
-      applyState(pref === 'collapsed');
+      // Re-position highlight after width transition settles
+      setTimeout(function () { positionHighlight(getActiveLink(), false); }, 240);
 
-      // Toggle on click
-      btn.addEventListener('click', function () {
-        var isCollapsed = sidebar.style.width === COLLAPSED;
-        var next = !isCollapsed;
-        applyState(next);
-        try { localStorage.setItem('r8n-sidebar', next ? 'collapsed' : 'expanded'); } catch(e) {}
-      });
+      try { localStorage.setItem('r8n-sidebar', collapsed ? 'collapsed' : 'expanded'); } catch(e) {}
+    }
 
-      // Hover tooltip on toggle button
-      btn.addEventListener('mouseenter', function() { btn.style.color = '#e2e8f0'; btn.style.background = 'rgba(255,255,255,0.08)'; });
-      btn.addEventListener('mouseleave', function() { btn.style.color = '#6b7280'; btn.style.background = 'transparent'; });
-    })();
+    // Restore saved preference
+    var pref = 'expanded';
+    try { pref = localStorage.getItem('r8n-sidebar') || 'expanded'; } catch(e) {}
+    applyCollapsed(pref === 'collapsed');
+
+    btn.addEventListener('click', function () {
+      applyCollapsed(!sidebar.classList.contains('collapsed'));
+    });
+  })();
   </script>
 
 </body>
