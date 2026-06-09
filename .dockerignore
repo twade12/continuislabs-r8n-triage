@@ -1,0 +1,40 @@
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Test artifacts
+.pytest_cache/
+tests/
+
+# Secrets and local state
+.env
+web/*.sqlite
+web/*.sqlite-wal
+web/*.sqlite-shm
+
+# Git
+.git/
+.gitignore
+
+# Docs and marketing (not needed in image)
+docs/
+marketing/
+*.md
+assignment.txt
+practice_questions.md
+
+# Deployment config (not needed inside the image)
+Dockerfile
+docker-compose.yml
+Caddyfile
+*.service
+*.sh
+nginx-*.conf
+
+# IDE
+.vscode/
+.idea/

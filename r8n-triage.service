@@ -10,7 +10,7 @@ EnvironmentFile=/home/mnemos/Documents/Hologram/.env
 ExecStart=/home/mnemos/Documents/Hologram/.venv/bin/uvicorn \
     web.main:app \
     --host 127.0.0.1 \
-    --port 8000 \
+    --port 8001 \
     --workers 1 \
     --log-level info
 Restart=on-failure

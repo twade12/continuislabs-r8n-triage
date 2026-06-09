@@ -1,0 +1,42 @@
+services:
+
+  r8n:
+    build: .
+    image: r8n-triage:latest
+    container_name: r8n-triage
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # SQLite database persists across container restarts/upgrades
+      - r8n-data:/data
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: r8n-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 (QUIC)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Caddy stores ACME certs and state in /data — must be a named volume
+      # so certs survive container restarts (avoids hitting Let's Encrypt rate limits)
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      r8n:
+        condition: service_healthy
+
+volumes:
+  r8n-data:
+  caddy-data:
+  caddy-config:

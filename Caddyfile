@@ -1,33 +1,25 @@
 r8n.continuislabs.cloud {
-    # Automatic TLS via Let's Encrypt — just works.
+	encode gzip
 
-    # Gzip compression
-    encode gzip
+	# Upstream is the r8n service on the Docker bridge network
+	reverse_proxy r8n:8000
 
-    # Rate limit the triage endpoints to prevent abuse
-    # (requires caddy-ratelimit plugin — see README deploy notes)
-    # rate_limit /triage/diagnose 10r/m
-    # rate_limit /portal/triage/diagnose 10r/m
+	# Long-lived static assets
+	@static path /static/*
+	header @static Cache-Control "public, max-age=86400, immutable"
 
-    # Proxy everything to uvicorn
-    reverse_proxy 127.0.0.1:8000
+	# Security headers
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
 
-    # Cache static assets
-    @static path /static/*
-    header @static Cache-Control "public, max-age=86400, immutable"
-
-    # Security headers
-    header {
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
-        X-XSS-Protection "1; mode=block"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
-
-    # Access log
-    log {
-        output file /var/log/caddy/r8n-access.log
-        format json
-    }
+	# Logs go to stdout — visible via `docker compose logs caddy`
+	log {
+		output stdout
+		format json
+	}
 }
