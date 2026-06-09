@@ -25,11 +25,14 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 
 from hologram_cli import mock_data
 from hologram_cli.triage import analyze, at_reference, draft_reply, parse
 from hologram_cli.triage.oracle import explain_state
-from web import db, seed
+from web import analytics, db, seed
+from web.auth import get_current_user, get_distinct_id
+from web.auth import router as auth_router
 
 BASE_DIR = Path(__file__).resolve().parent
 FIXTURES_DIR = BASE_DIR.parent / "fixtures" / "at_logs"
@@ -39,6 +42,18 @@ MAX_LOG_BYTES = 200_000  # 200 KB hard limit on triage input
 
 app = FastAPI(title="r8n-triage", version="0.1.0")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+# Session middleware must be added before any route that reads request.session
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("SECRET_KEY", "dev-secret-change-me-in-production"),
+    https_only=os.environ.get("APP_URL", "").startswith("https"),
+)
+app.include_router(auth_router)
+
+# Make PostHog key available to every template without passing it explicitly
+templates.env.globals["posthog_key"] = os.environ.get("POSTHOG_API_KEY", "")
+templates.env.globals["posthog_host"] = os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com")
 
 # ---- Auth ------------------------------------------------------------------
 
@@ -99,6 +114,11 @@ def on_startup() -> None:
     _SAMPLES = _load_samples()
 
 
+def ctx(request: Request, **kwargs) -> dict:
+    """Base template context — injects current_user into every response."""
+    return {"request": request, "current_user": get_current_user(request), **kwargs}
+
+
 # ---- Health check (public) -------------------------------------------------
 
 
@@ -117,7 +137,7 @@ def health() -> JSONResponse:
 
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "landing.html", {"request": request})
+    return templates.TemplateResponse(request, "landing.html", ctx(request))
 
 
 # ---- Phase 1: triage workbench (PUBLIC) ------------------------------------
@@ -132,13 +152,13 @@ def triage_page(
     return templates.TemplateResponse(
         request,
         "triage.html",
-        {
-            "request": request,
-            "active_page": "triage",
-            "preset_log": log or "",
-            "preset_iccid": iccid or "",
-            "samples": {k: v["title"] for k, v in _SAMPLES.items()},
-        },
+        ctx(
+            request,
+            active_page="triage",
+            preset_log=log or "",
+            preset_iccid=iccid or "",
+            samples={k: v["title"] for k, v in _SAMPLES.items()},
+        ),
     )
 
 
@@ -176,6 +196,7 @@ def triage_diagnose(
     sim_info = mock_data.get_sim(iccid) if iccid else None
     sim_explanation = explain_state(sim_info) if sim_info else None
 
+    user = get_current_user(request)
     session_id: Optional[str] = None
     if persist == "on":
         session_id = db.save_triage(
@@ -186,22 +207,37 @@ def triage_diagnose(
             module=log.module,
             diagnosis=diagnosis.as_dict(),
             reply_drafted=reply,
+            user_id=user["id"] if user else None,
         )
+
+    analytics.capture(
+        get_distinct_id(request),
+        "triage_submitted",
+        {
+            "vendor": log.vendor,
+            "module": log.module,
+            "top_rule": top.rule_id if top else None,
+            "confidence": top.confidence if top else None,
+            "has_iccid": bool(iccid),
+            "persisted": persist == "on",
+            "logged_in": bool(user),
+        },
+    )
 
     return templates.TemplateResponse(
         request,
         "partials/triage_result.html",
-        {
-            "request": request,
-            "diagnosis": diagnosis,
-            "reply": reply,
-            "vendor": log.vendor,
-            "module": log.module,
-            "similar": similar,
-            "sim_info": sim_info,
-            "sim_explanation": sim_explanation,
-            "session_id": session_id,
-        },
+        ctx(
+            request,
+            diagnosis=diagnosis,
+            reply=reply,
+            vendor=log.vendor,
+            module=log.module,
+            similar=similar,
+            sim_info=sim_info,
+            sim_explanation=sim_explanation,
+            session_id=session_id,
+        ),
     )
 
 
@@ -462,6 +498,7 @@ def at_index(request: Request, vendor: Optional[str] = None) -> HTMLResponse:
 @app.post("/at/decode", response_class=HTMLResponse)
 def at_decode(request: Request, line: str = Form(...)) -> HTMLResponse:
     result = at_reference.decode_response(line.strip())
+    analytics.capture(get_distinct_id(request), "at_response_decoded")
     return templates.TemplateResponse(
         request,
         "partials/at_decode_result.html",
@@ -472,6 +509,7 @@ def at_decode(request: Request, line: str = Form(...)) -> HTMLResponse:
 @app.get("/at/lookup", response_class=HTMLResponse)
 def at_lookup(request: Request, name: str) -> HTMLResponse:
     cmd = at_reference.lookup(name)
+    analytics.capture(get_distinct_id(request), "at_command_looked_up", {"command": name})
     return templates.TemplateResponse(
         request,
         "partials/at_lookup_result.html",

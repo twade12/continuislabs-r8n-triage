@@ -86,6 +86,20 @@ CREATE TABLE IF NOT EXISTS conductor_switches (
   new_profile  TEXT,
   trigger      TEXT
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id           TEXT PRIMARY KEY,
+  provider     TEXT NOT NULL,
+  provider_id  TEXT NOT NULL,
+  email        TEXT,
+  name         TEXT,
+  avatar_url   TEXT,
+  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_seen    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(provider, provider_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 """
 
 
@@ -104,6 +118,11 @@ def init_db() -> None:
     with conn() as c:
         c.execute("PRAGMA journal_mode=WAL")  # safe for single-worker; prevents reader/writer contention
         c.executescript(SCHEMA)
+        # Migrate existing triage_sessions tables that predate the user_id column
+        try:
+            c.execute("ALTER TABLE triage_sessions ADD COLUMN user_id TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
 
 def new_id() -> str:
@@ -122,6 +141,7 @@ def save_triage(
     module: str | None,
     diagnosis: dict,
     reply_drafted: str | None,
+    user_id: str | None = None,
 ) -> str:
     sid = new_id()
     top = (diagnosis.get("hypotheses") or [{}])[0]
@@ -130,13 +150,13 @@ def save_triage(
             """
             INSERT INTO triage_sessions
               (id, iccid, vendor, module, raw_log, customer_msg,
-               diagnosis_json, top_rule_id, top_confidence, reply_drafted)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               diagnosis_json, top_rule_id, top_confidence, reply_drafted, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 sid, iccid, vendor, module, raw_log, customer_msg,
                 json.dumps(diagnosis), top.get("rule_id"), top.get("confidence"),
-                reply_drafted,
+                reply_drafted, user_id,
             ),
         )
     return sid
@@ -370,6 +390,49 @@ def list_switches(limit: int = 30) -> list[dict]:
             "SELECT * FROM conductor_switches ORDER BY ts DESC LIMIT ?", (limit,)
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+# ---- users -------------------------------------------------------------
+
+
+def get_or_create_user(
+    *,
+    provider: str,
+    provider_id: str,
+    email: str | None,
+    name: str | None,
+    avatar_url: str | None,
+) -> dict:
+    """Return existing user or create a new one. Sets _new=True on first creation."""
+    with conn() as c:
+        row = c.execute(
+            "SELECT * FROM users WHERE provider = ? AND provider_id = ?",
+            (provider, provider_id),
+        ).fetchone()
+
+        if row:
+            c.execute(
+                "UPDATE users SET last_seen = CURRENT_TIMESTAMP, email = ?, name = ?, avatar_url = ? WHERE id = ?",
+                (email, name, avatar_url, row["id"]),
+            )
+            d = dict(row)
+            d["_new"] = False
+            return d
+
+        uid = new_id()
+        c.execute(
+            "INSERT INTO users (id, provider, provider_id, email, name, avatar_url) VALUES (?, ?, ?, ?, ?, ?)",
+            (uid, provider, provider_id, email, name, avatar_url),
+        )
+        return {
+            "id": uid, "provider": provider, "provider_id": provider_id,
+            "email": email, "name": name, "avatar_url": avatar_url, "_new": True,
+        }
+
+
+def count_users() -> int:
+    with conn() as c:
+        return c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
 
 
 # ---- internals ---------------------------------------------------------
